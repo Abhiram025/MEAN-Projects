@@ -1,6 +1,8 @@
 const toggleBtn=document.getElementById("turn-on") 
 const toggleSlider=document.getElementById("slider")
 const lightImg=document.getElementById("light-img")
+const copy=document.getElementById("copy")
+let date=new Date()
 let lightOn=false
 
 toggleBtn.addEventListener("click", ()=> {
@@ -17,3 +19,4 @@ toggleBtn.addEventListener("click", ()=> {
         toggleSlider.style.marginLeft="2px"
     }
 })
+copy.innerHTML=` © Copyrights ${date.getFullYear()} Reserved. developed by Abhiram`
