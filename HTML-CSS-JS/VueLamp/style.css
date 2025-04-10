@@ -1,0 +1,151 @@
+* {
+    font-family: "Poppins", sans-serif;
+    font-weight: 200;
+    box-sizing: border-box;
+}
+
+.container {
+    background-color: #1d2026;
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+    color: #fff;
+}
+
+nav .menu-items {
+    /* flex: 1; */
+    list-style: none;
+    margin-left: auto;
+    text-align: center;
+    padding-right: 20px;
+}
+
+nav .menu-items li {
+    display: inline;
+    padding: 4px 25px;
+}
+
+nav .menu-items li a:hover {
+    color: #09ce99;
+}
+
+nav .menu-items li a {
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+nav .menu-img {
+    width: 60px;
+    padding: 0;
+    margin-left: 50px;
+    cursor: pointer;
+}
+
+nav {
+    display: flex;
+    align-items: center;
+    padding: 5px 14px;
+}
+
+nav .logo-img {
+    width: 170px;
+    cursor: pointer;
+}
+
+nav button {
+    background-color: #efefef;
+    border: 0;
+    outline: 0;
+    height: 30px;
+    width: 56px;
+    border-radius: 20px;
+    cursor: pointer;
+    padding: 0;
+    margin-right: 60px;
+    transition: background 0.8s;
+}
+    
+nav button span {
+    display: block;
+    background-color: #999;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    margin-left: 2px;
+    transition: margin-left 0.8s, background 0.8s;
+}
+
+.lamp-container {
+    position:absolute;
+    top: -1px;
+    left: 10%;
+    width: 20%;
+}
+
+#light-img {
+    position: absolute;
+    top: 53%;
+    left: -350px;
+    height: 500px;
+    width: 1200px;
+    opacity: -100%;
+    transition: opacity 0.5s;
+}
+
+#lamp-img {
+    height: 570px;
+    width: 500px; 
+}
+
+.text-container {
+    max-width: 600px;
+    margin-top: 1%;
+    margin-left: 56%;
+    padding: 12px;
+}
+
+.text-container h1 {
+    font-weight: 500;
+    font-size: 80px;
+}
+
+.text-container a {
+    display: inline-block;
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+    background-color: #00986f;
+    padding: 8px 26px;
+    border-radius: 30px;
+    font-size: 20px;
+    margin-top: 30px;
+}
+
+.text-container a:hover {
+    background-color: #007556;
+}
+
+.control {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    margin-top: 250px;
+}
+
+.control .line {
+    width: 250px;
+    height: 4px;
+    background-color: #fff;
+    margin: 0 20px;
+    border-radius: 2px;
+}
+
+.control .line span {
+    width: 50%;
+    height: 8px;
+    margin-top: -2px;
+    border-radius: 4px;
+    background: #00986f;
+    display: block;
+}
