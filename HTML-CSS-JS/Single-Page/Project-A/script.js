@@ -4,21 +4,22 @@ const getTemp=document.getElementById("get-temp")
 const humidPercent=document.getElementById("humid-percent")
 const windPercent=document.getElementById("wind-percent")
 
-const fahrenheit=document.getElementById("fahrenheit").checked
-const celsius=document.getElementById("celsius").checked
-const kelvin=document.getElementById("kelvin").checked
-
 getTemp.addEventListener('click', ()=> { 
     const cityName=document.getElementById("city-name").value
     const apiKey="cf94d7d3e74b6f8bdbb77d49673e3a2a"
     const apiUrl="https://api.openweathermap.org/data/2.5/weather?"
-    const apiDetails=`q=${cityName}&appid=${apiKey}&units=${scale}`
+
+    const fahrenheit=document.getElementById("fahrenheit").checked
+    const celsius=document.getElementById("celsius").checked
+    const kelvin=document.getElementById("kelvin").checked
+
     const scale=fahrenheit?"standard":celsius?"metric":"imperial"
     const unit=fahrenheit?"°F":celsius?"°c":"°k"
+    const apiDetails=`q=${cityName}&appid=${apiKey}&units=${scale}`
 
     if(!cityName) {
         alert("Enter the city name")
-        cityName.focus()
+        cityNameElement.focus()
     }
     else {
         fetch(apiUrl+apiDetails)
