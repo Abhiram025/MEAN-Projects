@@ -11,13 +11,14 @@ body {
 
 .card {
     width: 90%;
-    max-width: 500px;
+    max-width: 550px;
     color: #fff;
     background: linear-gradient(135deg, #00feba, #5b548a);
     padding: 40px 35px;
     margin: 100px auto 0;
     border-radius: 20px;
     text-align: center;
+    box-shadow: 0 0 45px rgba(46, 169, 162, 1);
 }
 
 .card #app-name {
@@ -69,6 +70,16 @@ body {
     margin: 20px 30px;
 }
 
+.weather-report form  {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+}
+
+.weather-report form label {
+    margin-left: -25px;
+}
+
 .weather-icon {
     width: 140px;
     margin-top: 30px;
@@ -112,7 +123,7 @@ body {
 }
 
 #windy {
-    margin-right: 10px;;
+    margin-right: 10px;
 }
 
 .humidity, .wind {
