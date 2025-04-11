@@ -14,30 +14,30 @@
             <h1 id="app-name">Weather App</h1>
             <div class="search">
                 <input type="text" placeholder="Enter City Name" id="city-name">
-                <button><img src="./imgs/search.png" id="city-search"></button>
+                <button id="get-temp"><img src="./imgs/search.png" id="city-search"></button>
             </div>
             <div class="weather-report">
                 <img src="./imgs/clear.png" class="weather-icon">
-                <h1 id="temp">40°c</h1>
-                <h2 id="city">Hyderabad</h2>
+                <h1 id="temp"></h1>
+                <h2 id="city"></h2>
                 <div class="weather-details">
                     <div class="col">
                         <img src="./imgs/humidity.png"  id="humid">
                         <div>
-                            <p class="humidity">50%</p>
+                            <p class="humidity" id="humid-percent"></p>
                             <p>Humidity</p>
                         </div>
                     </div>
                     <div class="col">
                         <img src="./imgs/wind.png" id="windy">
                         <div>
-                            <p class="wind">15kmph</p>
+                            <p class="wind" id="wind-percent"></p>
                             <p>Wind Speed</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <script src="./script.js"></script>
+        <script src="./script.js" type="module"></script>
     </body>
 </html>
