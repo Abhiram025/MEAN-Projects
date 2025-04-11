@@ -8,6 +8,10 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+        <link rel="apple-touch-icon" sizes="180x180" href="./favicon/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="./favicon/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="./favicon/favicon-16x16.png">
+        <link rel="manifest" href="./favicon/site.webmanifest">
     </head>
     <body>
         <div class="card">
@@ -17,10 +21,10 @@
                 <button id="get-temp"><img src="./imgs/search.png" id="city-search"></button>
             </div>
             <div class="weather-report">
-                <form method="post">
-                    <input type="radio" id="fahrenheit" name="scale"><label>Standard</label>
-                    <input type="radio" id="celsius" name="scale"><label>Metric</label>
-                    <input type="radio" id="kelvin" name="scale"><label>Imperial</label>
+                <form method="post" class="scale-sel">
+                    <label><input type="radio" id="fahrenheit" name="scale">Standard</label>
+                    <label><input type="radio" id="celsius" name="scale">Metric</label>
+                    <label><input type="radio" id="kelvin" name="scale">Imperial</label>
                 </form>
                 <img src="./imgs/clear.png" class="weather-icon">
                 <h1 id="temp"></h1>
