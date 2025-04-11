@@ -3,6 +3,9 @@ const city=document.getElementById("city")
 const getTemp=document.getElementById("get-temp")
 const humidPercent=document.getElementById("humid-percent")
 const windPercent=document.getElementById("wind-percent")
+const weatherIcon=document.querySelector(".weather-icon")
+const report=document.querySelector(".weather-report")
+const err=document.getElementById("err")
 
 getTemp.addEventListener('click', ()=> { 
     const cityName=document.getElementById("city-name").value
@@ -23,12 +26,43 @@ getTemp.addEventListener('click', ()=> {
     }
     else {
         fetch(apiUrl+apiDetails)
-        .then(response=>response.json())
+        .then(response=>{
+                if(response.code==404) {
+                    err.textContent=new Error("Invalid city")
+                    return
+                }
+                return response.json()})
         .then(data=>{
             temp.textContent=`${data.main.temp}${unit}`
             city.textContent=data.name
             windPercent.textContent=`${data.wind.speed}Kmph`
             humidPercent.textContent=`${data.main.humidity}%`
+            
+            if(data.weather[0].main==="clear") {
+                weatherIcon.src="./imgs/clear.png"
+            }
+            else if(data.weather[0].main==="clouds") {
+                weatherIcon.src="./imgs/clouds.png"
+            }
+            else if(data.weather[0].main==="mist") {
+                weatherIcon.src="./imgs/mist.png"
+            }
+            else if(data.weather[0].main==="rain") {
+                weatherIcon.src="./imgs/rain.png"
+            }
+            else if(data.weather[0].main==="fog") {
+                weatherIcon.src="./imgs/fog.png"
+            }
+            else if(data.weather.main==="snow") {
+                weatherIcon.src="./imgs/snow.png"
+            }
+            else {
+                weatherIcon.src="./imgs/drizzle.png"
+            }
+            report.style.display="block"
         })
-    }    
+    }  
 })
+
+
+
