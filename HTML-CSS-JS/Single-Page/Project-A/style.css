@@ -1,3 +1,4 @@
+
 * {
     margin: 0;
     padding: 0;
@@ -25,6 +26,19 @@ body {
     text-align: center;
     margin-bottom: 5px;
     color: #5b548a;
+    user-select: none;
+    cursor: pointer
+}
+
+.card #app-name:hover {
+    color: #fff;
+}
+
+.err-class p {
+    color: red;
+    font-size: 8px;
+    margin-left: 0;
+    margin-top: 15px;
 }
 
 .search {
@@ -67,6 +81,7 @@ body {
 }
 
 .weather-report {
+    display: none;
     margin: 20px 30px;
 }
 
@@ -80,10 +95,6 @@ body {
     background: #ebfffc;
     border: 0;
     outline: 0;
-}
-
-.weather-report form label {
-    margin-left: -25px;
 }
 
 .weather-icon {
@@ -135,9 +146,4 @@ body {
 .humidity, .wind {
     font-size: 30px;
     margin-top: -20px;
-}
-
-#err {
-    font-size: 8px;
-    color: red;
 }
