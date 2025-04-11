@@ -17,9 +17,14 @@
                 <button id="get-temp"><img src="./imgs/search.png" id="city-search"></button>
             </div>
             <div class="weather-report">
+                <form method="post">
+                    <input type="radio" id="fahrenheit" name="scale"><label>Standard</label>
+                    <input type="radio" id="celsius" name="scale"><label>Metric</label>
+                    <input type="radio" id="kelvin" name="scale"><label>Imperial</label>
+                </form>
                 <img src="./imgs/clear.png" class="weather-icon">
                 <h1 id="temp"></h1>
-                <h2 id="city"></h2>
+                <h2 id="city"></h2>                
                 <div class="weather-details">
                     <div class="col">
                         <img src="./imgs/humidity.png"  id="humid">
