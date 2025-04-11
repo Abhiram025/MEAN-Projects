@@ -12,10 +12,10 @@ const apiDetails=`&q=${cityName}&appid=${apiKey}`
 async function weatherReport() {
     const ob1=await fetch(apiUrl+apiDetails)
     const weatherObj=await ob1.json()
-    temp.textContent=`${weatherObj.temperature}°c`
+    temp.textContent=`${weatherObj.main.temp}°c`
     city.textContent=weatherObj.name
-    windPercent.textContent=`${weatherObj.windSpeed}KMPH`
-    humidPercent.textContent=`${weatherObj.humidity}%`
+    windPercent.textContent=`${weatherObj.wind.speed}KMPH`
+    humidPercent.textContent=`${weatherObj.main.humidity}%`
 }
 
 getTemp.addEventListener('click', ()=> {
