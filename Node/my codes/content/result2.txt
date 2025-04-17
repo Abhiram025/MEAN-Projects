@@ -1,0 +1,1 @@
+this is not a war machine: and the code is this is another demo  of read file for demo of another type of asynchronous functions & this is the second one for async await in node modules through npm
