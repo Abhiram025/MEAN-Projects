@@ -23,10 +23,16 @@ app.get('/api/products/:pId', (req,res)=>{
     res.status(404).send(`<h1>cannot find the product</h1>`)
 })
 app.get('/api/v1/query', (req,res)=> {
-    console.log(req.query)
     const {search,limit}=req.query
     let sortedProducts=[...products]
-    res.end(``)
+    
+    if(search) {
+        sortedProducts=sortedProducts.filter(p=>p.name.startsWith(search))
+    }
+    if(limit) {
+        sortedProducts=sortedProducts.slice(0,Number(limit))
+    }
+    res.status(200).json(sortedProducts)
 })
 
 app.listen(5000, ()=>{console.log("Server is active on port 5000: ")})
