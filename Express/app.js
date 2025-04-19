@@ -1,18 +1,32 @@
 const express=require('express')
-const app=express()  //instance of a server
+const app=express()
+
+const { products } = require('./data')
 
 app.get('/', (req,res)=>{
-    res.send("Home Page")
+    res.send(`<h1>Home Page</h1><a href="./api/products">products</a>`)
+})
+app.get('/api/products', (req,res)=> {
+    const newProducts=products.map(p=> {
+        // const id=p.id
+        // const name=p.name
+        // const image=p.image
+        const {id,name,image}=p
+        return {id, name, image}
+    })
+    res.json(newProducts)
+})
+app.get('/api/products/:pId', (req,res)=>{
+    const {pId}=req.params
+    const product=products.find(p=>p.id===Number(pId))
+    if(product) res.json(product)
+    res.status(404).send(`<h1>cannot find the product</h1>`)
+})
+app.get('/api/v1/query', (req,res)=> {
+    console.log(req.query)
+    const {search,limit}=req.query
+    let sortedProducts=[...products]
+    res.end(``)
 })
 
-app.get('/about', (req,res)=>{
-    res.send("About Page")
-})
-
-app.all('*', (req,res)=>{
-    res.status(404).send("Page not found")
-})
-
-app.listen(5000, ()=>{
-    console.log('server is listening')
-})
+app.listen(5000, ()=>{console.log("Server is active on port 5000: ")})
