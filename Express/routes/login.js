@@ -1,10 +1,8 @@
 const express=require('express')
 const router=express.Router()
 
-router.post('/',(req,res)=>{
-    const {name}=req.body
-    if(name) return res.status(200).send(`welcome ${name}`)
-    else return res.status(401).send("enter your name")
-})
+const {loginPerson}=require('../controllers/loginController')
+
+router.post('/', loginPerson)
 
 module.exports=router
