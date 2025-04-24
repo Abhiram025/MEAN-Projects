@@ -9,5 +9,6 @@ const {getPeople, createPerson}=require('../controllers/peopleController')
 
 //this is another way of setting the routes
 router.route('/').get(getPeople).post(createPerson)
+router.route('/:id').put(updatePerson).delete(removePerson)
 
 module.exports=router
