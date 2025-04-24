@@ -9,5 +9,6 @@ app.use(express.json())
 
 app.use('/login',login)
 app.use('/api/people',people)
+app.use('/api/postman/people',addPerson)
 
 app.listen(5000, ()=>{console.log("Server is active on port 5000: ")})
