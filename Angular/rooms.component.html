@@ -1,0 +1,30 @@
+<div [hidden]="hideRooms">
+    <p>Rooms Available: </p>
+    <p [innerText]="rooms.availableRooms"></p>
+</div>
+
+<div *ngIf="rooms.availableRooms > 0">
+    List of Rooms:
+    <table>
+        <tr>
+            <th>Room Number</th>
+            <th>Room Type</th>
+            <th>Room Facilities</th>
+            <th>Room Price</th>
+            <!-- <th>Room Photo</th> -->
+            <th>Room Check-in Date</th>
+            <th>Room Check-out Date</th>
+        </tr>
+        <tr *ngFor="let r of roomsList">
+            <td>{{r.roomNumber}}</td>
+            <td>{{r.roomType}}</td>
+            <td>{{r.amenities}}</td>
+            <td>{{r.price}}</td>
+            <!-- <td>Room Photo</td> -->
+            <td>{{r.checkIn}}</td>
+            <td>{{r.checkOut}}</td>
+        </tr>
+    </table>
+</div>
+
+<button (click)="toggle()">Toggle</button><!--Event Binding-->
