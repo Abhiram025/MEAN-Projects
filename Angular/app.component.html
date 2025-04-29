@@ -1,10 +1,10 @@
-<h1>Hotel Inventory</h1>
-<h1>Hello {{firstName}}</h1><!-- interpolation -->
-<span>Welcome to <span [innerText]="hotelName"></span></span><br><!--Property binding-->
+<h1>Hotel <span [innerText]="hotelName"></span></h1><!--Property binding-->
+<h2>Hello {{firstName}}</h2><br><!-- interpolation -->
+
 <hbm-rooms></hbm-rooms>
 
-<div *ngSwitch="role">
-  <div *ngSwitchCases="'admin'"></div>
-  <div *ngSwitchCases="'callDesk'"></div>
-  <div *ngSwitchCases="'houseKeeper'"></div>
-</div>
+<!-- <div [ngSwitch]="role">
+  <div *ngSwitchCase="'user'">Welcome User!</div>
+  <div *ngSwitchCase="'admin'"><hbm-rooms></hbm-rooms></div>
+  <div *ngSwitchDefault>You are not authorized to view this page</div>
+</div> -->
