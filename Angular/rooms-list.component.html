@@ -1,0 +1,23 @@
+<p>List of Rooms:</p>
+<table>
+    <tr [ngStyle]="{'background-color': 'skyblue'}">
+        <th>Room Number</th>
+        <th>Room Type</th>
+        <th>Room Facilities</th>
+        <th>Room Price</th>
+        <!-- <th>Room Photo</th> -->
+        <th>Room Check-in Date</th>
+        <th>Room Check-out Date</th>
+        <th>Select Room</th>
+    </tr>
+    <tr [ngClass]="{'evenRow': isEven, 'oddRow':isOdd}" *ngFor="let r of room let isEven=even let isOdd=odd"><!--| slice:0:2-->
+        <td>{{r.roomNumber}}</td>
+        <td>{{r.roomType | titlecase}}</td>
+        <td>{{r.amenities | lowercase}}</td>
+        <td>{{r.price | currency: 'INR'}}</td>
+        <!-- <td>Room Photo</td> -->
+        <td>{{r.checkIn | date: 'full'}}</td>
+        <td>{{r.checkOut | date}}</td>
+        <td><button class="btn btn-primary" (click)="selectRoom(r)">Book</button></td>
+    </tr>
+</table>
