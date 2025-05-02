@@ -1,1 +1,3 @@
-
+.flattenDeep is a lodash method which itself is an external module. which is used to falttena nested array into a single one
+Why use util.promisify()?
+Some Node.js functions (like fs.readFile(), fs.writeFile(), etc.) use callbacks by default. util.promisify() helps you convert those functions into Promise-based versions, allowing you to use async/await or .then() chaining.
