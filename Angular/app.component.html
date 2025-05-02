@@ -1,7 +1,15 @@
 <h1>Hotel <span [innerText]="hotelName"></span></h1><!--Property binding-->
 <h2>Hello {{firstName}}</h2><br><!-- interpolation -->
+<div #name></div>
+<!-- <hbm-rooms></hbm-rooms> -->
+<!-- <div>
+  <ng-template #rooms></ng-template>
+</div> -->
+<hbm-container>
+  <hbm-rooms></hbm-rooms>
+  <hbm-employee></hbm-employee>
+</hbm-container>
 
-<hbm-rooms></hbm-rooms>
 
 <!-- <div [ngSwitch]="role">
   <div *ngSwitchCase="'user'">Welcome User!</div>
