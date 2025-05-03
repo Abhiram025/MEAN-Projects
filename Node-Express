@@ -1,4 +1,38 @@
+NODE:-
+Node.js runs single-threaded, non-blocking, asynchronous programming, which is very memory efficient.
+The fs.appendFile() method appends specified content to a file. If the file does not exist, the file will be created.
+The fs.writeFile() method replaces the specified file and content if it exists. If the file does not exist, a new file, containing the specified content, will be created.
+To delete a file with the File System module,  use the fs.unlink() method.
+To rename a file with the File System module,  use the fs.rename() method.
+Parse an address with the url.parse() method, and it will return a URL object with each part of the address as properties
+A package in Node.js contains all the files you need for a module.
+Modules are JavaScript libraries you can include in your project.
+NPM creates a folder named "node_modules", where the package will be placed. All packages you install in the future will be placed in this folder.
+To include the built-in Events module use the require() method. In addition, all event properties and methods are an instance of an EventEmitter object. To be able to access these properties and methods, create an EventEmitter object:
+var events = require('events');
+var eventEmitter = new events.EventEmitter();
+There is a very good module for working with file uploads, called "Formidable".
+Include the Formidable module to be able to parse the uploaded file once it reaches the server.
+The Nodemailer module makes it easy to send emails from your computer.
+MySQL:-var mysql = require('mysql');
+var con = mysql.createConnection({
+  host: "localhost",
+  user: "yourusername",
+  password: "yourpassword"
+});
+
+con.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected!");
+  con.query("CREATE DATABASE mydb", function (err, result) {
+    if (err) throw err;
+    console.log("Database created");
+  });
+});
+
+
 .flattenDeep is a lodash method which itself is an external module. which is used to convert a nested array into a single one
 Why use util.promisify()?
 Some Node.js functions (like fs.readFile(), fs.writeFile(), etc.) use callbacks by default. util.promisify() helps you convert those functions into Promise-based versions, allowing you to use async/await or .then() chaining.
 few built-in middlewares in express is .static.express.json, .urlEncoded(), Router() and these middlewares are appled to the code using .use()
+.use() can handle errors too
