@@ -102,3 +102,5 @@ DEBUG = express:application,express:router node index.js
 The express.raw() function is a built-in middleware function in Express. It parses incoming request payloads into a Buffer and is based on body-parser. 
 The express.static() is a built-in middleware function in Express.js that allows you to serve static files (like images, HTML, CSS, and JavaScript) directly to the client. It automatically makes all files inside a specified folder accessible via HTTP requests. You don’t have to create custom routes for each file.
 The express.urlencoded() middleware in Express.js is used to parse URL-encoded form data, making it accessible as a JavaScript object in req.body. It’s essential for handling form submissions in application/x-www-form-urlencoded format.
+
+Scaffolding in ExpressJS refers to the process of generating a basic project structure automatically. This can speed up the initial setup and help maintain consistency in the way projects are structured, especially in large teams.
