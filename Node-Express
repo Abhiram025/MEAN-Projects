@@ -30,11 +30,11 @@ con.connect(function(err) {
   });
 });
 
-
+EXPRESS:-
 .flattenDeep is a lodash method which itself is an external module. which is used to convert a nested array into a single one
 Why use util.promisify()?
 Some Node.js functions (like fs.readFile(), fs.writeFile(), etc.) use callbacks by default. util.promisify() helps you convert those functions into Promise-based versions, allowing you to use async/await or .then() chaining.
-few built-in middlewares in express is .static.express.json, .urlEncoded(), Router() and these middlewares are appled to the code using .use()
+few built-in middlewares in express is .static.express.json, .urlEncoded(), Router(), raw() and these middlewares are appled to the code using .use()
 .use() can handle errors too
 Middleware functions in Express.js can perform several important tasks:
 Execute Code: Middleware can run any code when a request is received.
@@ -51,3 +51,38 @@ Router-level middleware is applied to a specific router instance using router.us
 Error-handling middleware is a special type of middleware used to catch and respond to errors during the request-response cycle. It is defined with four parameters: err, req, res, next.
 5. Third-party Middleware
 Third-party middleware is developed by external developers and packaged as npm modules. These middleware packages add additional functionality to your application, such as request logging, security features, or data validation.
+
+Advantages of Middleware:-
+1, Modularity.
+2, Reusability.
+3, Maintainability.
+4, Error Handling.
+5, Performance Optimization.
+
+RESTful API:- A RESTful API is an API that follows the principles of REST (Representational State Transfer). It's a standard way to structure communication between client (like a website or app) and server over the web, usually using HTTP.
+1, Each request is independent — the server doesn't remember previous requests; all info must come with the request.
+2, The client (browser/app) and server operate separately — they only communicate via requests and responses.
+3, Most RESTful APIs send responses in JSON format — clean, lightweight, and easy to use.
+4, Everything is treated as a resource (like /users, /products) and accessed via clear, meaningful URLs.
+
+Few req properties used in Express:-
+1, 'req.query': Access query string parameters.
+2, 'req.params': Access route parameters.
+3, 'req.body': Access the body of the request (for POST/PUT).
+4, 'req.headers': Access request headers.
+5, 'req.method': HTTP method (e.g., GET, POST).
+6, 'req.url': URL of the request.
+
+Error Handling:-
+Error handling in Express refers to the process of managing errors that occur during the execution of a request. When an error occurs in a route or middleware, Express provides mechanisms to catch these errors and prevent the application from crashing. Error-handling middleware allows developers to:
+1, Log errors for debugging.
+2, Send structured error responses to users.
+3, Maintain application stability even when issues arise.
+4, Good error handling makes an application more reliable and user-friendly, improving both developer efficiency and the user experience.
+
+error handling can be done either automatically or we can use error-handling middleware.
+
+In express, there is a module present called DEBUG that gives log information. It tells about middleware functions, application mode, their status, and also about the requests and responses made to the server.
+DEBUG = express:application,express:router node index.js
+
+The express.raw() function is a built-in middleware function in Express. It parses incoming request payloads into a Buffer and is based on body-parser. 
