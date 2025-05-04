@@ -29,6 +29,20 @@ con.connect(function(err) {
     console.log("Database created");
   });
 });
+Node.js Buffers are used to handle binary data directly in memory. They provide a way to work with raw binary data streams efficiently, crucial for I/O operations, such as reading from files or receiving data over a network.
+Buffers are instances of the Buffer class in Node.js. Buffers are designed to handle binary raw data. Buffers allocate raw memory outside the V8 heap. Buffer class is a global class so it can be used without importing the Buffer module in an application.
+uninitiated buffer:-const ubuf = Buffer.alloc(5);
+array buffer:- const abuf = new Buffer([16, 32, 48, 64]);
+string buffer:- var sbuf = new Buffer("GeeksforGeeks", "ascii");
+The Buffer.copy() method simply copies all the values from the input buffer to another buffer. 
+Buffer is a temporary memory storage that stores the data when it is being moved from one place to another. It is like an array of integers. Buffer.compare() method compares the two given buffers.
+The Buffer.alloc() method is used to create a new buffer object of the specified size.
+The Buffer.equals() method is used to compare two buffer objects and returns True of both buffer objects are the same otherwise returns False.
+The Buffer.from() method is used to create a new buffer containing the specified string, array, or buffer. the main difference between from and alloc is here in from we pass the existing data and we get its array in buffer but in case of alloc we pass the size and the array of the buffer returns zeroes.
+The Buffer.write() method writes the specified string into a buffer, at the specified position. If buffer did not contain enough space to fit the entire string, only part of string will be written.
+Node.js streams are a key part of handling I/O operations efficiently. They provide a way to read or write data continuously, allowing for efficient data processing, manipulation, and transfer.
+The stream module in Node.js provides an abstraction for working with streaming data. Streams are a powerful feature that allows handling data in chunks rather than loading it all at once, which is efficient for both memory usage and performance.  const stream = require('stream');
+
 
 EXPRESS:-
 .flattenDeep is a lodash method which itself is an external module. which is used to convert a nested array into a single one
