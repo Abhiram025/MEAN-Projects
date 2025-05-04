@@ -36,3 +36,18 @@ Why use util.promisify()?
 Some Node.js functions (like fs.readFile(), fs.writeFile(), etc.) use callbacks by default. util.promisify() helps you convert those functions into Promise-based versions, allowing you to use async/await or .then() chaining.
 few built-in middlewares in express is .static.express.json, .urlEncoded(), Router() and these middlewares are appled to the code using .use()
 .use() can handle errors too
+Middleware functions in Express.js can perform several important tasks:
+Execute Code: Middleware can run any code when a request is received.
+Modify Request and Response: Middleware can modify both the request (req) and response (res) objects.
+End the Request-Response Cycle: Middleware can send a response to the client, ending the cycle.
+Call the Next Middleware: Middleware can call next() to pass control to the next function in the middleware stack.
+
+Types of middleware:-
+1. Application-level Middleware
+Application-level middleware is bound to the entire Express application using app.use() or app.METHOD(). It executes for all routes in the application, regardless of the specific path or HTTP method.
+2. Router-level Middleware
+Router-level middleware is applied to a specific router instance using router.use() or router.METHOD(). It only applies to routes defined within that particular router, making it perfect for modular applications where middleware is only relevant to specific groups of routes.
+3. Error-handling Middleware
+Error-handling middleware is a special type of middleware used to catch and respond to errors during the request-response cycle. It is defined with four parameters: err, req, res, next.
+5. Third-party Middleware
+Third-party middleware is developed by external developers and packaged as npm modules. These middleware packages add additional functionality to your application, such as request logging, security features, or data validation.
