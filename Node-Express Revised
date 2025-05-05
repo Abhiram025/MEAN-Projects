@@ -1,0 +1,19 @@
+Node.js is a platform built on Chrome's JavaScript runtime for easily building fast and scalable network applications. Node.js uses an event-driven, non-blocking I/O model that makes it lightweight and efficient, perfect for data-intensive real-time applications that run across distributed devices.
+Features of Node.js:-License, Open source, No buffering, Highly Scalable, Single threaded, I/O is Asynchronous and Event Driven, Extremely fast.
+npm  version is used to check the version of the npm.
+"npm search express" command is used to search express or module.
+to evaluate an argument:- node -e/node --eval not only evaluate but also printing :- node -p/--print
+timers a re global functions.
+1, Standard JavaScript errors i.e. <EvalError>, <SyntaxError>, <RangeError>, <ReferenceError>(like any variable not defined), <TypeError>, <URIError> etc.
+2, System errors
+3, User-specified errors
+4, Assertion errors
+Node.js provides the ability to perform socket programming. We can create chat application or communicate client and server applications using socket programming in Node.js. The Node.js net module contains functions for creating both servers and clients.
+node debug main.js used to debug the file
+child_process.exec() method: This method runs a command in a console and buffers the output.
+child_process.spawn() method: This method launches a new process with a given command.
+child_process.fork() method: This method is a special case of spawn() method to create child processes.
+Streams are the objects that facilitate you to read data from a source and write data to a destination. there are 4 types of streams:- read, write, duplex, transform.
+Each type of stream is an Event emitter instance and throws several events at different times. there are 4 types of events:-data, error, end, finish.
+Piping is a mechanism where output of one stream is used as input to another stream. There is no limit on piping operation.
+The Node.js Assert is the most elementary way to write tests. It provides no feedback when running your test unless one fails. The assert module provides a simple set of assertion tests that can be used to test invariants. The module is intended for internal use by Node.js, but can be used in application code via require ('assert').
