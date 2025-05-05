@@ -17,3 +17,4 @@ Streams are the objects that facilitate you to read data from a source and write
 Each type of stream is an Event emitter instance and throws several events at different times. there are 4 types of events:-data, error, end, finish.
 Piping is a mechanism where output of one stream is used as input to another stream. There is no limit on piping operation.
 The Node.js Assert is the most elementary way to write tests. It provides no feedback when running your test unless one fails. The assert module provides a simple set of assertion tests that can be used to test invariants. The module is intended for internal use by Node.js, but can be used in application code via require ('assert').
+in node we use url, URL is used to handle URL-related operations, and URLSearchParams helps with manipulating URL query parameters.
