@@ -31,4 +31,7 @@ for testing an express app, there are many options available like Thunder client
 Express and Multer (middleware for handling file uploads).
 The GET method is mainly used on the client side to send a request to a specified server to get certain data or resources.
 in express, we can do search and filtering by the query parameters passed in the link from the client to the server as a request.
-
+JSON Web Token (JWT) authentication in an Express.js application secures routes by ensuring that only authenticated users can access specific resources. they are stateless. express, mongoose, and JSON web token are essential modules.
+CORS is all about protecting user from  malicious sites. it is a browser-based protocol in which a website can't access  resource from another website/API/Server but the browser generally won't allow few resources according to its policy but CORS helps to overlook this and lets the browser to display the info of the website on the website displayed currently. npm i express cors
+app.use() is used to define middleware that executes on every request, regardless of the HTTP method (GET, POST, PUT, DELETE, etc.). It can be used to define middleware that runs only for specific URL paths. If no path is specified, it applies to all routes.
+The .env file is used for storing sensitive information in a web application which we don't want to expose to others like password, database connection string etc.
