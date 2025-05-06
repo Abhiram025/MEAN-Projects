@@ -18,3 +18,17 @@ Each type of stream is an Event emitter instance and throws several events at di
 Piping is a mechanism where output of one stream is used as input to another stream. There is no limit on piping operation.
 The Node.js Assert is the most elementary way to write tests. It provides no feedback when running your test unless one fails. The assert module provides a simple set of assertion tests that can be used to test invariants. The module is intended for internal use by Node.js, but can be used in application code via require ('assert').
 in node we use url, URL is used to handle URL-related operations, and URLSearchParams helps with manipulating URL query parameters.
+
+EXPRESS
+The req.cookies property is used when the user is using cookie-parser middleware.(npm install cookie-parser)
+app.set is used to set the value of a key-value pair.
+The res.app property holds a reference to the instance of the Express application that is using the middleware. 
+The res.headersSent property is a boolean property that indicates if the app sent HTTP headers for the response. we can set header through res.send inirectly by sending its body.
+The res.cookie() function is used to set a cookie in the client’s browser. it will be automatically converted into JSON.
+The express-session middleware allows the creation and storage of the session data used for authentication or user preferences. Using this middleware, we can properly maintain the stateful interaction between the Express.js server and the client.
+body parser is a thrid party application.
+for testing an express app, there are many options available like Thunder client, PAW, etc.
+Express and Multer (middleware for handling file uploads).
+The GET method is mainly used on the client side to send a request to a specified server to get certain data or resources.
+in express, we can do search and filtering by the query parameters passed in the link from the client to the server as a request.
+
