@@ -1,0 +1,61 @@
+<div [ngClass]="'paymentPage'">
+    <h3>Select Your Payment Method</h3>
+    <div [ngClass]="'payment-method'">
+        <div [ngClass]="'upi-details'">
+            <div [ngClass]="'pay'" (click)="toggleUpi()" name="upi">
+                <p>UPI</p>
+            </div>
+            <div [ngClass]="'payment-panel'" *ngIf="isToggledUpi">
+                <form>
+                    <label>
+                        <input type="radio" name="pay-type" [(ngModel)]="viewPay" value="v1">
+                        UPI ID
+                    </label>
+                    <label>
+                        <input type="radio" name="pay-type" [(ngModel)]="viewPay" value="v2">
+                        QR Code
+                    </label>
+                </form>
+
+                <div *ngIf="viewPay==='v1'">
+                    <p>Please Enter the UPI ID:</p>
+                    <input type="text" placeholder="eg:- abc@oksbi.com">
+                    <button>Pay {{tax|currency:"INR"}}</button>
+                </div>
+                <div *ngIf="viewPay==='v2'">
+                    <p>Please scan the below QR</p>
+                    <app-qrcode></app-qrcode>
+                    <div>
+                        <div [ngClass]="'price-particulars'">
+                            <p>total rent:</p>
+                            <p>{{payment.rent|currency:"INR"}}</p>
+                        </div>
+                        <div [ngClass]="'price-particulars'">
+                            <p>tax:</p>
+                            <p>{{300|currency:"INR"}}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div [ngClass]="'card-details'">
+            <div [ngClass]="'pay'" (click)="toggleCard()" name="card">
+                <p>Card Details</p>
+            </div>
+            <div [ngClass]="'payment-panel'" *ngIf="isToggledCard">
+                <p>Card details</p>
+                <form>
+                    <label [for]="'cardNumber'">Card Number:</label>
+                    <input [type]="'text'" [name]="'cardNumber'" [placeholder]="'eg:- XXXX-XXXX-XXXX'">
+                    <label [for]="'expiryDate'">Expiry Date:</label>
+                    <input [type]="'text'" [name]="'expiryDate'" [placeholder]="'eg:- 03/23'">
+                    <label [for]="'CVV'">CVV:</label>
+                    <input [type]="'text'" [name]="'CVV'" [placeholder]="'eg:- 000'" [ngStyle]="{'width': '30px'}"><br>
+                    <button>Pay {{tax|currency:"INR"}}</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>

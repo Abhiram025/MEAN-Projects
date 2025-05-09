@@ -1,0 +1,23 @@
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background-color:rgb(26, 153, 238);
+    color: #fff;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    background-color:rgb(26, 153, 238);
+    color: #fff;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

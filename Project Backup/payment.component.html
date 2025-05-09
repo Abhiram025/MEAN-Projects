@@ -1,0 +1,20 @@
+<h2 [ngStyle]="{'text-align': 'center'}">Order Summary</h2>
+<div [ngClass]="'payment-summary'">
+    <div [ngClass]="'car-details'">
+        <table>
+            <tr>
+                <th colspan="3">Payment Details</th>
+            </tr>
+            <tr>
+                <td>{{payment.selectedCar}}</td>
+                <td>{{payment.timeIn|date:'full'}} {{payment.timeOut|date:'full'}}</td>
+                <td>{{payment.rent|currency:"INR"}}</td>
+            </tr>
+        </table>
+        <div>
+            <p>Location: <span>Hyderabad</span></p>
+        </div>
+    </div>
+
+    <app-payment-type></app-payment-type>
+</div>
