@@ -3,7 +3,7 @@
     <div [ngClass]="'payment-method'">
         <div [ngClass]="'upi-details'">
             <div [ngClass]="'pay'" (click)="toggleUpi()" name="upi">
-                <p>UPI</p>
+                <p class="d-flex justify-content-between align-items-center"><img src="../../assets/bhim-upi.png" alt="BHIM" width="40" class="me-2">UPI<i class="bi bi-caret-down-fill"></i></p>
             </div>
             <div [ngClass]="'payment-panel'" *ngIf="isToggledUpi">
                 <form>
@@ -19,8 +19,8 @@
 
                 <div *ngIf="viewPay==='v1'">
                     <p>Please Enter the UPI ID:</p>
-                    <input type="text" placeholder="eg:- abc@oksbi.com">
-                    <button>Pay {{tax|currency:"INR"}}</button>
+                    <input type="text" class="form-control saffron-focus" placeholder="eg:- abc@oksbi.com">
+                    <button [ngClass]="'pay-button'" class="btn mt-3">Pay {{tax|currency:"INR"}}</button>
                 </div>
                 <div *ngIf="viewPay==='v2'">
                     <p>Please scan the below QR</p>
@@ -41,20 +41,28 @@
 
         <div [ngClass]="'card-details'">
             <div [ngClass]="'pay'" (click)="toggleCard()" name="card">
-                <p>Card Details</p>
+                <p class="d-flex justify-content-between align-items-center"><i class="bi bi-credit-card"></i>Card Payment Method<i class="bi bi-caret-down-fill"></i></p>
             </div>
             <div [ngClass]="'payment-panel'" *ngIf="isToggledCard">
-                <p>Card details</p>
                 <form>
-                    <label [for]="'cardNumber'">Card Number:</label>
-                    <input [type]="'text'" [name]="'cardNumber'" [placeholder]="'eg:- XXXX-XXXX-XXXX'">
-                    <label [for]="'expiryDate'">Expiry Date:</label>
-                    <input [type]="'text'" [name]="'expiryDate'" [placeholder]="'eg:- 03/23'">
-                    <label [for]="'CVV'">CVV:</label>
-                    <input [type]="'text'" [name]="'CVV'" [placeholder]="'eg:- 000'" [ngStyle]="{'width': '30px'}"><br>
-                    <button>Pay {{tax|currency:"INR"}}</button>
+                  <label for="cardNumber">Card Number:</label>
+                  <input type="text" class="form-control" name="cardNumber" placeholder="eg:- XXXX-XXXX-XXXX">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <label for="expiryDate">Expiry Date:</label>
+                      <input type="text" class="form-control" name="expiryDate" placeholder="eg:- 03/23">
+                    </div>
+                    <div class="col-md-6">
+                      <label for="CVV">CVV:</label>
+                      <div class="cvv-group">
+                        <input type="text" class="form-control" name="CVV" placeholder="eg:- 000">
+                        <span class="cvv-group-icon"><i class="bi bi-card-checklist"></i></span>
+                      </div>                      
+                    </div>
+                  </div>
+                  <button [ngClass]="'pay-button'" class="btn mt-3">Pay {{ tax | currency: 'INR' }}</button>
                 </form>
-            </div>
+              </div>
         </div>
 
     </div>
