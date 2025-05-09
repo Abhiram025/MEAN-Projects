@@ -17,13 +17,19 @@ export class PaymentTypeComponent implements OnInit {
   isToggledCard = false
   toggleUpi() {
     this.isToggledUpi = !this.isToggledUpi
+    if(this.isToggledUpi) {
+      this.isToggledCard = false;
+    }
   }
   toggleCard() {
     this.isToggledCard = !this.isToggledCard
+    if(this.isToggledCard) {
+      this.isToggledUpi = false;
+    }
   }
 
 
-  viewPay:string=''
+  viewPay:string='v1'
 
   constructor() { }
 
