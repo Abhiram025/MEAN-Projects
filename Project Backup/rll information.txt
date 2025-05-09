@@ -2,3 +2,4 @@ libraries and other downloaded on 9th may
 1, npm install angularx-qrcode@15.0.1 and imported 'QRCodeModule' in app.module.ts --> for generating qr code
 2, import formsModule in app.module.ts using import { FormsModule } from '@angular/forms';
 3, then i downloaded bootstrap for better css using command "npx ng add ngx-bootstrap"
+4, then download bootstrap icons using "npm install bootstrap bootstrap-icons"
