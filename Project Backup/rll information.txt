@@ -3,3 +3,4 @@ libraries and other downloaded on 9th may
 2, import formsModule in app.module.ts using import { FormsModule } from '@angular/forms';
 3, then i downloaded bootstrap for better css using command "npx ng add ngx-bootstrap"
 4, then download bootstrap icons using "npm install bootstrap bootstrap-icons"
+5, <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
