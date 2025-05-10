@@ -135,4 +135,4 @@ Use Interfaces for loose Use ting as and when required
 Use standard HTTP status codes: 404,500,200,201,401,403 while implementing RESTful web API
 
 
-mongodb+srv://Abhiram25:<db_password>@cluster0.aqqayll.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+mongodb+srv://Abhiram25:<db_password>@cluster0.aqqayll.mongodb.net/
