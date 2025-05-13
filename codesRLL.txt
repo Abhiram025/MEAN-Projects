@@ -30,3 +30,5 @@ async function createUser() {
 }
 
 createUser();
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjJjZTEyOGM1ZjE2OTQ4YWIzODRlZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc0NzExMjE1NywiZXhwIjoxNzQ3MTk4NTU3fQ.SGj6C4CsoaQFPtqndBuKKePudKymEM0hU4jE06QkNqM-token
