@@ -1,235 +1,184 @@
-authController.js
-async register(req, res) {
+carController.js
+const CarService = require('../services/carService');
+
+class CarController {
+  async createCar(req, res) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        console.error("The data is incorrect")
-        return res.status(400).json({ errors: errors.array() });
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden' });
       }
-      const user = await AuthService.register(req.body);
-      const token = jwt.sign(
-        { 
-     
-          username: user.username, 
-          role: user.role 
-        },
-        config.JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-      const userResponse = {
-      
-        username: user.username,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        address: user.address,
-        email: user.email,
-        role: user.role,
-      };
-      res.status(201).json({ 
-        user: userResponse,
-        token 
-      });
+      // if (!req.body.registrationNumber) {
+      //   return res.status(400).json({ message: 'Registration number is required' });
+      // }
+      const car = await CarService.createCar(req.body);
+      res.status(201).json(car);
+    } catch (error) {
+      console.log("you are not admin")
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async updateCar(req, res) {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      const car = await CarService.updateCar(req.params.id, req.body);
+      res.json(car);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
-  } 
+  }
 
-userModel.js
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  firstname: {
-    type: String,
-    required: true,
-    // Only if names must be unique
-  },
-  lastname: String,
-  phone: String,
-  address: {
-    type: String,
-    required: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    validate: {
-      validator: function (v) {
-        // Regex for basic email validation
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-      },
-      message: props => ${props.value} is not a valid email address!
+  async deleteCar(req, res) {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      await CarService.deleteCar(req.params.id);
+      res.json({ message: 'Car deleted successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
     }
-  },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  }
 
-  loyaltyPoints: { type: Number, default: 0 },
-  eligibleForDiscountedRides: { type: Number, default: 0 },
-  resetPasswordToken: String,
-  resetPasswordExpires: Date
+  async getAvailableCars(req, res) {
+    try {
+      const cars = await CarService.getAvailableCars();
+      res.json(cars);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getCarsByType(req, res) {
+    try {
+      const cars = await CarService.getCarsByType(req.params.type);
+      res.json(cars);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getCarById(req, res) {
+    try {
+      const car = await CarService.getCarById(req.params.id);
+      res.json(car);
+    } catch (error) {
+      res.status(404).json({ message: error.message });
+    }
+  }
+}
+
+module.exports = new CarController();
+
+carDal.js
+const BaseDAL = require('./baseDal');
+const Car = require('../models/carModel');
+
+class CarDAL extends BaseDAL {
+  constructor() {
+    super(Car);
+  }
+
+  async findAvailableCars() {
+    return await this.find({ availabilityStatus: 'available' });
+  }
+
+  async findByType(carType) {
+    return await this.find({ type: carType, availabilityStatus: 'available' });
+  }
+}
+
+module.exports = new CarDAL();
+
+carModel.js
+const mongoose = require('mongoose');
+
+const carSchema = new mongoose.Schema({
+  make: { type: String, required: true },
+  model: { type: String, required: true },
+  cartype: { 
+    type: String, 
+    required: true,
+    enum: ['hyundai-i20', 'sedan', 'suv', 'force traveller', 'honda city'] 
+  },
+  carCategory: { 
+    type: String, 
+    required: true,
+    enum: ['economy', 'premier', 'luxury'] 
+  },
+  year: { type: Number, required: true },
+  pricePerKm: { type: Number, required: true },
+  pricePerDay: { type: Number, required: true },
+  availabilityStatus: { 
+    type: String, 
+    enum: ['available', 'rented', 'maintenance'], 
+    default: 'available' 
+  },
+  currentOdometer: { type: Number, required: true },
+  imageUrl: String,
+  features: [String]
 }, { timestamps: true });
 
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
-});
+module.exports = mongoose.model('Car', carSchema);
 
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
-
-module.exports = mongoose.model('User', userSchema);
-
-authService.js
-const UserDAL = require('../dal/userDal');
-const jwt = require('jsonwebtoken');
-const config = require('../config');
-
-class AuthService {
-  async register(userData) {
-    const existingUser = await UserDAL.findByUsername(userData.username) || 
-                        await UserDAL.findByEmail(userData.email);
-    if (existingUser) {
-      throw new Error('Username or email already exists');
-    }
-    return await UserDAL.create(userData);
-  }
-
-  async login(username, password) {
-    const user = await UserDAL.findByUsername(username);
-    if (!user) {
-      throw new Error('User not found');
-    }
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      throw new Error('Invalid credentials');
-    }
-    const token = jwt.sign(
-      {  role: user.role }, 
-      config.JWT_SECRET, 
-      { expiresIn: '1d' }
-    );
-    return { user, token };
-  }
-
-  async createAdmin(adminData) {
-    adminData.role = 'admin';
-    return await this.register(adminData);
-  }
-}
-
-module.exports = new AuthService();
-
-userDal.js
-const BaseDAL = require('./baseDal');
-const User = require('../models/userModel');
-
-class UserDAL extends BaseDAL {
-  constructor() {
-    super(User);
-  }
-
-  async findByUsername(username) {
-    return await this.findOne({ username });
-  }
-
-  async findByEmail(email) {
-    return await this.findOne({ email });
-  }
-}
-
-module.exports = new UserDAL();
-baseDal.js
-class BaseDAL {
-  constructor(model) {
-    this.model = model;
-  }
-
-  async create(data) {
-    return await this.model.create(data);
-  }
-
-  async findById(id) {
-    return await this.model.findById(id);
-  }
-
-  async findOne(conditions) {
-    return await this.model.findOne(conditions);
-  }
-
-  async find(conditions = {}) {
-    return await this.model.find(conditions);
-  }
-
-  async updateById(id, data) {
-    return await this.model.findByIdAndUpdate(id, data, { new: true });
-  }
-
-  async deleteById(id) {
-    return await this.model.findByIdAndDelete(id);
-  }
-}
-
-module.exports = BaseDAL;
-
-authRoutes.js
+carRouter.js
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authController');
-const validate  = require('../middleware/validation');
-const { check } = require('express-validator');
+const carController = require('../controllers/carController');
+const { authenticate } = require('../middleware/auth');
 
-router.post('/register', 
-  validate([
-    check('username').not().isEmpty().withMessage('Username is required'),
-    check('firstName').not().isEmpty(),
-    check('lastName').not().isEmpty(),
-    check('address').not().isEmpty(),
-    check('email').isEmail().withMessage('Valid email is required'),
-    check('password').isLength({ min: 11 }).withMessage('Password must be at least 11 characters')    
-  ]),
-  authController.register
-);
+// Public routes
+router.get('/', carController.getAvailableCars);
+router.get('/:id', carController.getCarById);
+router.get('/type/:type', carController.getCarsByType);
 
-router.post('/login', 
-  validate([
-    check('username').not().isEmpty().withMessage('Username is required'),
-    check('password').not().isEmpty().withMessage('Password is required')
-  ]),
-  authController.login
-);
+// Admin-only routes
+router.use(authenticate);
+router.post('/', carController.createCar);
+router.put('/:id', carController.updateCar);
+router.delete('/:id', carController.deleteCar);
 
 module.exports = router;
-{ 
-    "errors": [
-        {
-            "type": "field",
-            "msg": "Invalid value",
-            "path": "firstName",
-            "location": "body"
-        },
-        {
-            "type": "field",
-            "msg": "Invalid value",
-            "path": "lastName",
-            "location": "body"
-        }
-    ]
-} why am i getting this error in postman for this data
-{
-    "username":"Ritesh1311",
-    "firstname":"Ritesh",
-    "lastname":"Kavali",
-    "address":"kadapa, AP",
-    "email":"ritesh1105@gmail.com",
-    "password":"09876543211"
-} send through POST request in /api/register
 
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjJjZTEyOGM1ZjE2OTQ4YWIzODRlZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc0NzExMjE1NywiZXhwIjoxNzQ3MTk4NTU3fQ.SGj6C4CsoaQFPtqndBuKKePudKymEM0hU4jE06QkNqM-token
-{
-    "message": "E11000 duplicate key error collection: carzy_rentals.users index: profile.firstName_1 dup key: { profile.firstName: null }"
+carService.js
+const CarDAL = require('../dal/carDal');
+
+class CarService {
+  async createCar(carData) {
+    return await CarDAL.create(carData);
+  }
+
+  async updateCar(carId, carData) {
+    return await CarDAL.updateById(carId, carData);
+  }
+
+  async deleteCar(carId) {
+    return await CarDAL.deleteById(carId);
+  }
+
+  async getAvailableCars() {
+    return await CarDAL.findAvailableCars();
+  }
+
+  async getCarsByType(carType) {
+    return await CarDAL.findByType(carType);
+  }
+
+  async getCarById(carId) {
+    return await CarDAL.findById(carId);
+  }
 }
+
+module.exports = new CarService();
+these are the codes for my car CRUD operations im getting this error in postman
+{
+    "message": "E11000 duplicate key error collection: carzy_rentals.cars index: registrationNumber_1 dup key: { registrationNumber: null }"
+}
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjJjZTEyOGM1ZjE2OTQ4YWIzODRlZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc0NzExMjE1NywiZXhwIjoxNzQ3MTk4NTU3fQ.SGj6C4CsoaQFPtqndBuKKePudKymEM0hU4jE06QkNqM-admin1 token
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkplZXZhNjg3Iiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzQ3MTI0MzUzLCJleHAiOjE3NDk3MTYzNTN9.8iEIw6jsLX9DiqvkOzy8lGxSALIBSTeCytVoPiDL9Yg-admin2 token
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IlJpdGVzaDEzMTEiLCJyb2xlIjoidXNlciIsImlhdCI6MTc0NzExOTM1NSwiZXhwIjoxNzQ5NzExMzU1fQ.r_PFL-lbuBoE7XGFnhjd9-fkek6utO6DRTvuLAKXWfU-user token
+
+
