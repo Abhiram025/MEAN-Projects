@@ -231,5 +231,5 @@ module.exports = router;
 
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjJjZTEyOGM1ZjE2OTQ4YWIzODRlZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc0NzExMjE1NywiZXhwIjoxNzQ3MTk4NTU3fQ.SGj6C4CsoaQFPtqndBuKKePudKymEM0hU4jE06QkNqM-token
 {
-    "message": "User validation failed: firstname: Path `firstname` is required."
-} 
+    "message": "E11000 duplicate key error collection: carzy_rentals.users index: profile.firstName_1 dup key: { profile.firstName: null }"
+}
