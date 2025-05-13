@@ -1,180 +1,326 @@
-carController.js
-const CarService = require('../services/carService');
+rentalController.js
+const RentalService = require('../services/rentalService');
 
-class CarController {
-  async createCar(req, res) {
+class RentalController {
+  async bookCar(req, res) {
+    try {
+      const { carId, rentalStartDate, rentalEndDate } = req.body;
+      const rental = await RentalService.bookCar(
+        req.user.id, 
+        carId, 
+        new Date(rentalStartDate), 
+        new Date(rentalEndDate)
+      );
+      res.status(201).json(rental);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async pickupCar(req, res) {
     try {
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Forbidden' });
       }
-      // if (!req.body.registrationNumber) {
-      //   return res.status(400).json({ message: 'Registration number is required' });
-      // }
-      const car = await CarService.createCar(req.body);
-      res.status(201).json(car);
+      const rental = await RentalService.pickupCar(
+        req.params.id, 
+        req.body.pickupOdometerReading
+      );
+      res.json(rental);
     } catch (error) {
-      console.log("you are not admin")
       res.status(400).json({ message: error.message });
     }
   }
 
-  async updateCar(req, res) {
+  async returnCar(req, res) {
     try {
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Forbidden' });
       }
-      const car = await CarService.updateCar(req.params.id, req.body);
-      res.json(car);
+      const rental = await RentalService.returnCar(
+        req.params.id, 
+        req.body.returnOdometerReading
+      );
+      res.json(rental);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
   }
 
-  async deleteCar(req, res) {
+  async cancelBooking(req, res) {
+    try {
+      await RentalService.cancelBooking(
+        req.params.id, 
+        req.user.id, 
+        req.user.role === 'admin'
+      );
+      res.json({ message: 'Booking cancelled successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getUserRentals(req, res) {
+    try {
+      const rentals = await RentalService.getUserRentals(req.user.id, req.query.type);
+      res.json(rentals);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getAllRentals(req, res) {
     try {
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Forbidden' });
       }
-      await CarService.deleteCar(req.params.id);
-      res.json({ message: 'Car deleted successfully' });
+      const rentals = await RentalService.getAllRentals();
+      res.json(rentals);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
   }
 
-  async getAvailableCars(req, res) {
+  async getUserRentalHistory(req, res) {
     try {
-      const cars = await CarService.getAvailableCars();
-      res.json(cars);
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      const rentals = await RentalService.getUserRentals(req.params.userId);
+      res.json(rentals);
     } catch (error) {
       res.status(400).json({ message: error.message });
-    }
-  }
-
-  async getCarsByType(req, res) {
-    try {
-      const cars = await CarService.getCarsByType(req.params.type);
-      res.json(cars);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  async getCarById(req, res) {
-    try {
-      const car = await CarService.getCarById(req.params.id);
-      res.json(car);
-    } catch (error) {
-      res.status(404).json({ message: error.message });
     }
   }
 }
 
-module.exports = new CarController();
+module.exports = new RentalController();
 
-carDal.js
+rentalDal.js
 const BaseDAL = require('./baseDal');
-const Car = require('../models/carModel');
+const Rental = require('../models/rentalModel');
 
-class CarDAL extends BaseDAL {
+class RentalDAL extends BaseDAL {
   constructor() {
-    super(Car);
+    super(Rental);
   }
 
-  async findAvailableCars() {
-    return await this.find({ availabilityStatus: 'available' });
+  async findUserRentals(userId, status) {
+    const query = { user: userId };
+    if (status) {
+      if (status === 'previous') {
+        query.status = 'completed';
+      } else if (status === 'future') {
+        query.status = { $in: ['booked', 'rented'] };
+      }
+    }
+    return await this.find(query).populate('car');
   }
 
-  async findByType(carType) {
-    return await this.find({ type: carType, availabilityStatus: 'available' });
+  async findAllRentals() {
+    return await this.find().populate('user car');
   }
 }
 
-module.exports = new CarDAL();
+module.exports = new RentalDAL();
 
 carModel.js
 const mongoose = require('mongoose');
 
-const carSchema = new mongoose.Schema({
-  make: { type: String, required: true },
-  model: { type: String, required: true },
-  cartype: { 
+const rentalSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  car: { type: mongoose.Schema.Types.ObjectId, ref: 'Car', required: true },
+  rentalStartDate: { type: Date, required: true },
+  rentalEndDate: { type: Date, required: true },
+  actualPickupDate: Date,
+  actualReturnDate: Date,
+  pickupOdometer: Number,
+  returnOdometer: Number,
+  totalKmDriven: Number,
+  baseCostPerKm: Number,
+  baseCostPerDay: Number,
+  taxRateApplied: Number,
+  taxAmount: Number,
+  frequentRenterDiscountAmount: Number,
+  loyaltyDiscountAmount: Number,
+  totalCost: Number,
+  status: { 
     type: String, 
-    required: true,
-    enum: ['hyundai-i20', 'sedan', 'suv', 'force traveller', 'honda city'] 
+    enum: ['booked', 'rented', 'completed', 'cancelled'], 
+    default: 'booked' 
   },
-  carCategory: { 
-    type: String, 
-    required: true,
-    enum: ['economy', 'premier', 'luxury'] 
-  },
-  year: { type: Number, required: true },
-  pricePerKm: { type: Number, required: true },
-  pricePerDay: { type: Number, required: true },
-  availabilityStatus: { 
-    type: String, 
-    enum: ['available', 'rented', 'maintenance'], 
-    default: 'available' 
-  },
-  currentOdometer: { type: Number, required: true },
-  imageUrl: String,
-  features: [String]
+  loyaltyPointsEarned: { type: Number, default: 0 }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Car', carSchema);
+module.exports = mongoose.model('Rental', rentalSchema);
 
 carRouter.js
 const express = require('express');
 const router = express.Router();
-const carController = require('../controllers/carController');
+const rentalController = require('../controllers/rentalController');
 const { authenticate } = require('../middleware/auth');
 
-// Public routes
-router.get('/', carController.getAvailableCars);
-router.get('/:id', carController.getCarById);
-router.get('/type/:type', carController.getCarsByType);
-
-// Admin-only routes
 router.use(authenticate);
-router.post('/', carController.createCar);
-router.put('/:id', carController.updateCar);
-router.delete('/:id', carController.deleteCar);
+
+router.post('/', rentalController.bookCar);
+router.get('/', rentalController.getUserRentals);
+router.get('/all', rentalController.getAllRentals);
+router.get('/user/:userId', rentalController.getUserRentalHistory);
+router.put('/:id/pickup', rentalController.pickupCar);
+router.put('/:id/return', rentalController.returnCar);
+router.delete('/:id', rentalController.cancelBooking);
 
 module.exports = router;
 
 carService.js
+const RentalDAL = require('../dal/rentalDal');
 const CarDAL = require('../dal/carDal');
+const UserDAL = require('../dal/userDal');
+const TaxService = require('./taxService');
 
-class CarService {
-  async createCar(carData) {
-    return await CarDAL.create(carData);
+const KM_FOR_LOYALTY_POINT = 50;
+const POINTS_FOR_DISCOUNT_RIDES = 25;
+const DISCOUNTED_RIDES_COUNT = 2;
+const FREQUENT_RENTER_KM_THRESHOLD = 1000;
+const FREQUENT_RENTER_DISCOUNT_RATE = 0.10;
+const LOYALTY_RIDE_DISCOUNT_FIXED_AMOUNT = 20;
+
+class RentalService {
+  async bookCar(userId, carId, rentalStartDate, rentalEndDate) {
+    const [car, user] = await Promise.all([
+      CarDAL.findById(carId),
+      UserDAL.findById(userId)
+    ]);
+    
+    if (!car || car.availabilityStatus !== 'available') {
+      throw new Error('Car not available for booking');
+    }
+    if (!user) throw new Error('User not found');
+
+    const taxRule = await TaxService.getTaxByCarType(car.type);
+    if (!taxRule) throw new Error('Tax rule not found for car type');
+
+    return await RentalDAL.create({
+      user: userId,
+      car: carId,
+      rentalStartDate,
+      rentalEndDate,
+      baseCostPerKm: car.pricePerKm,
+      baseCostPerDay: car.pricePerDay,
+      taxRateApplied: taxRule.taxPercentage / 100,
+      status: 'booked'
+    });
   }
 
-  async updateCar(carId, carData) {
-    return await CarDAL.updateById(carId, carData);
+  async pickupCar(rentalId, pickupOdometerReading) {
+    const rental = await RentalDAL.findById(rentalId);
+    if (!rental || rental.status !== 'booked') {
+      throw new Error('Invalid rental for pickup');
+    }
+
+    const car = await CarDAL.findById(rental.car);
+    if (!car || pickupOdometerReading < car.currentOdometer) {
+      throw new Error('Invalid odometer reading');
+    }
+
+    await CarDAL.updateById(rental.car, {
+      availabilityStatus: 'rented',
+      currentOdometer: pickupOdometerReading
+    });
+
+    return await RentalDAL.updateById(rentalId, {
+      actualPickupDate: new Date(),
+      pickupOdometer: pickupOdometerReading,
+      status: 'rented'
+    });
   }
 
-  async deleteCar(carId) {
-    return await CarDAL.deleteById(carId);
+  async returnCar(rentalId, returnOdometerReading) {
+    const rental = await RentalDAL.findById(rentalId).populate('user car');
+    if (!rental || rental.status !== 'rented') {
+      throw new Error('Invalid rental for return');
+    }
+    if (!rental.pickupOdometer || returnOdometerReading < rental.pickupOdometer) {
+      throw new Error('Invalid odometer reading');
+    }
+
+    const totalKmDriven = returnOdometerReading - rental.pickupOdometer;
+    const durationDays = Math.ceil((new Date() - rental.actualPickupDate) / (1000 * 60 * 60 * 24));
+    
+    let calculatedCost = durationDays * rental.baseCostPerDay + totalKmDriven * rental.baseCostPerKm;
+    const taxAmount = calculatedCost * rental.taxRateApplied;
+    let finalCost = calculatedCost + taxAmount;
+
+    // Apply frequent renter discount
+    const pastRentals = await RentalDAL.find({ user: rental.user._id, status: 'completed' });
+    const totalUserKmRented = pastRentals.reduce((sum, r) => sum + (r.totalKmDriven || 0), 0);
+
+    if ((totalUserKmRented + totalKmDriven) > FREQUENT_RENTER_KM_THRESHOLD) {
+      finalCost -= finalCost * FREQUENT_RENTER_DISCOUNT_RATE;
+    }
+
+    // Apply loyalty discount if available
+    if (rental.user.eligibleForDiscountedRides > 0) {
+      finalCost -= LOYALTY_RIDE_DISCOUNT_FIXED_AMOUNT;
+      rental.user.eligibleForDiscountedRides -= 1;
+    }
+    finalCost = Math.max(0, finalCost);
+
+    // Update loyalty points
+    const loyaltyPointsEarned = Math.floor(totalKmDriven / KM_FOR_LOYALTY_POINT);
+    rental.user.loyaltyPoints += loyaltyPointsEarned;
+
+    if (rental.user.loyaltyPoints >= POINTS_FOR_DISCOUNT_RIDES) {
+      const setsOfPoints = Math.floor(rental.user.loyaltyPoints / POINTS_FOR_DISCOUNT_RIDES);
+      rental.user.eligibleForDiscountedRides += setsOfPoints * DISCOUNTED_RIDES_COUNT;
+      rental.user.loyaltyPoints %= POINTS_FOR_DISCOUNT_RIDES;
+    }
+
+    await UserDAL.updateById(rental.user._id, {
+      loyaltyPoints: rental.user.loyaltyPoints,
+      eligibleForDiscountedRides: rental.user.eligibleForDiscountedRides
+    });
+
+    await CarDAL.updateById(rental.car._id, {
+      availabilityStatus: 'available',
+      currentOdometer: returnOdometerReading
+    });
+
+    return await RentalDAL.updateById(rentalId, {
+      actualReturnDate: new Date(),
+      returnOdometer: returnOdometerReading,
+      totalKmDriven,
+      taxAmount,
+      totalCost: finalCost,
+      status: 'completed',
+      loyaltyPointsEarned
+    });
   }
 
-  async getAvailableCars() {
-    return await CarDAL.findAvailableCars();
+  async cancelBooking(rentalId, userId, isAdmin = false) {
+    const rental = await RentalDAL.findById(rentalId).populate('user');
+    if (!rental) throw new Error('Rental not found');
+    if (!isAdmin && rental.user._id.toString() !== userId.toString()) {
+      throw new Error('Not authorized to cancel this booking');
+    }
+    if (rental.status !== 'booked') throw new Error('Cannot cancel booking');
+
+    return await RentalDAL.updateById(rentalId, { status: 'cancelled' });
   }
 
-  async getCarsByType(carType) {
-    return await CarDAL.findByType(carType);
+  async getUserRentals(userId, type = 'all') {
+    return await RentalDAL.findUserRentals(userId, type);
   }
 
-  async getCarById(carId) {
-    return await CarDAL.findById(carId);
+  async getAllRentals() {
+    return await RentalDAL.findAllRentals();
   }
 }
 
-module.exports = new CarService();
-these are the codes for my car CRUD operations im getting this error in postman
+module.exports = new RentalService();
+these are the codes for my rental operations im getting this error in postman
 {
-    "message": "E11000 duplicate key error collection: carzy_rentals.cars index: registrationNumber_1 dup key: { registrationNumber: null }"
+    "message": "Cast to ObjectId failed for value \" 682307b7a542584d7bebd178\" (type string) at path \"_id\" for model \"Car\""
 }
 
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjJjZTEyOGM1ZjE2OTQ4YWIzODRlZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc0NzExMjE1NywiZXhwIjoxNzQ3MTk4NTU3fQ.SGj6C4CsoaQFPtqndBuKKePudKymEM0hU4jE06QkNqM-admin1 token
