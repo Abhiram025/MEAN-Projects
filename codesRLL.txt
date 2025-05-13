@@ -328,3 +328,29 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkplZXZhNjg3Iiwicm9sZSI6ImF
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoidXNlciIsImlhdCI6MTc0NzEyOTYyOSwiZXhwIjoxNzQ3MjE2MDI5fQ.XDazMVx1uTsQE7qDwoG-U0BxX-dqKhtk-YgwNcprX-g-user token
 
 
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+
+module.exports = {
+  authenticate: (req, res, next) => {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+
+    try {
+      const decoded = jwt.verify(token, config.JWT_SECRET);
+      req.user = decoded;
+      next();
+    } catch (error) {
+      res.status(401).json({ message: 'Token is not valid' });
+    }
+  },
+
+  authorizeAdmin: (req, res, next) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    next();
+  }
+}
