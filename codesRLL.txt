@@ -1,5 +1,435 @@
+authController.js
 
+const AuthService = require('../services/authService');
+const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
+const User = require('../models/userModel');
+const jwt = require('jsonwebtoken');
+const config = require('../config');
 
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjJjZTEyOGM1ZjE2OTQ4YWIzODRlZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc0NzExMjE1NywiZXhwIjoxNzQ3MTk4NTU3fQ.SGj6C4CsoaQFPtqndBuKKePudKymEM0hU4jE06QkNqM-admin1 token
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkplZXZhNjg3Iiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzQ3MTI0MzUzLCJleHAiOjE3NDk3MTYzNTN9.8iEIw6jsLX9DiqvkOzy8lGxSALIBSTeCytVoPiDL9Yg-admin2 token
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoidXNlciIsImlhdCI6MTc0NzEyOTYyOSwiZXhwIjoxNzQ3MjE2MDI5fQ.XDazMVx1uTsQE7qDwoG-U0BxX-dqKhtk-YgwNcprX-g-user token
+class AuthController {
+  async register(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        console.error("The data is incorrect")
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const user = await AuthService.register(req.body);
+      const token = jwt.sign(
+        { 
+     
+          username: user.username, 
+          role: user.role 
+        },
+        config.JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+      const userResponse = {
+      
+        username: user.username,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        address: user.address,
+        email: user.email,
+        role: user.role,
+      };
+      res.status(201).json({ 
+        user: userResponse,
+        token 
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async login(req, res) {
+    try {
+      const { username, password } = req.body;
+      const { user, token } = await AuthService.login(username, password);
+      res.json({ user, token });
+    } catch (error) {
+      res.status(401).json({ message: error.message });
+    }
+  }
+  
+
+  async createAdmin(req, res) {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      const admin = await AuthService.createAdmin(req.body);
+      res.status(201).json(admin);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+}
+
+module.exports = new AuthController();
+
+userController.js
+const UserService = require('../services/userService');
+
+class UserController {
+  async getProfile(req, res) {
+    try {
+      const user = await UserService.getUserById(req.user.id);
+      res.json(user);
+    } catch (error) {
+      res.status(404).json({ message: error.message });
+    }
+  }
+
+  async updateProfile(req, res) {
+    try {
+      const user = await UserService.updateProfile(req.user.id, req.body);
+      res.json(user);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async changePassword(req, res) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Both current and new password are required' });
+      }
+      await UserService.changePassword(req.user.id, currentPassword, newPassword);
+      res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+}
+
+module.exports = new UserController();
+
+baseDal.js
+class BaseDAL {
+  constructor(model) {
+    this.model = model;
+  }
+
+  find(conditions = {}) {
+    return this.model.find(conditions);
+  }
+
+  async create(data) {
+    return await this.model.create(data);
+  }
+
+  findById(id) {
+    return this.model.findById(id);
+  }
+
+  async findByIdAndPopulate(id, populatePaths) {
+    return await this.model.findById(id).populate(populatePaths);
+  }
+
+  async findOne(conditions) {
+    return await this.model.findOne(conditions);
+  }
+
+  async find(conditions = {}) {
+    return await this.model.find(conditions);
+  }
+
+  async updateById(id, data) {
+    return await this.model.findByIdAndUpdate(id, data, { new: true });
+  }
+
+  async deleteById(id) {
+    return await this.model.findByIdAndDelete(id);
+  }
+}
+
+module.exports = BaseDAL;
+
+userDal.js
+const BaseDAL = require('./baseDal');
+const User = require('../models/userModel');
+
+class UserDAL extends BaseDAL {
+  constructor() {
+    super(User);
+  }
+
+  async findByUsername(username) {
+    return await this.findOne({ username });
+  }
+
+  async findByEmail(email) {
+    return await this.findOne({ email });
+  }
+}
+
+module.exports = new UserDAL();
+
+middleware/auth.js
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+
+module.exports = {
+  authenticate: (req, res, next) => {
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    if (!authHeader) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+
+    const token=authHeader.replace(/^Bearer\s+/i, '')
+    console.log("Extracted token: ", token)//debug
+
+    if(!token) {
+      return res.status(401).json({message: 'No token, authorization denied'})
+    }
+    try {
+      const decoded = jwt.verify(token, config.JWT_SECRET);
+      console.log('Decoded Token Payload: ', decoded)//debug
+      req.user = decoded;
+      next();
+    } catch (error) {
+      console.error('JWT Verification Error: ', error)//debug
+      res.status(401).json({ message: 'Token is not valid' });
+    }
+  },
+
+  authorizeAdmin: (req, res, next) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    next();
+  }
+};
+
+middleware/validation.js
+const { validationResult } = require('express-validator');
+const validate=(validations) => {
+  return async (req, res, next) => {
+    await Promise.all(validations.map(validation => validation.run(req)));
+
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      return next();
+    }
+
+    res.status(400).json({ errors: errors.array() });
+  };
+};
+module.exports = validate
+
+userModel.js
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  firstname: {
+    type: String,
+    required: true,
+    // Only if names must be unique
+  },
+  lastname: String,
+  phone: String,
+  address: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    validate: {
+      validator: function (v) {
+        // Regex for basic email validation
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      },
+      message: props => `${props.value} is not a valid email address!`
+    }
+  },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+
+  loyaltyPoints: { type: Number, default: 0 },
+  eligibleForDiscountedRides: { type: Number, default: 0 },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
+}, { timestamps: true });
+
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err)
+  }
+
+});
+
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);
+
+authRouter.js
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/authController');
+const validate  = require('../middleware/validation');
+const { check } = require('express-validator');
+
+router.post('/register', 
+  validate([
+    check('username').notEmpty().withMessage('Username is required'),
+    check('firstname').notEmpty().withMessage('firstname is required'),
+    check('lastname').notEmpty().withMessage('lastname is required'),
+    check('address').notEmpty().withMessage('address is required'),
+    check('email').isEmail().withMessage('Valid email is required'),
+    check('password').isLength({ min: 11 }).withMessage('Password must be at least 11 characters')    
+  ]),
+  authController.register
+);
+
+router.post('/login', 
+  validate([
+    check('username').not().isEmpty().withMessage('Username is required'),
+    check('password').not().isEmpty().withMessage('Password is required')
+  ]),
+  authController.login
+);
+
+module.exports = router;
+
+userRouter.js
+const express = require('express');
+const router = express.Router();
+const userController = require('../controllers/userController');
+const { authenticate } = require('../middleware/auth');
+
+router.use(authenticate);
+
+router.get('/profile', userController.getProfile);
+router.put('/profile', userController.updateProfile);
+router.put('/change-password', userController.changePassword);
+
+module.exports = router;
+
+authService.js
+const UserDAL = require('../dal/userDal');
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+
+class AuthService {
+  async register(userData) {
+    const existingUser = await UserDAL.findByUsername(userData.username) || 
+                        await UserDAL.findByEmail(userData.email);
+    if (existingUser) {
+      throw new Error('Username or email already exists');
+    }
+    return await UserDAL.create(userData);
+  }
+
+  async login(username, password) {
+    const user = await UserDAL.findByUsername(username);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      throw new Error('Invalid credentials');
+    }
+    const token = jwt.sign(
+      { id: user._id,  role: user.role }, 
+      config.JWT_SECRET, 
+      { expiresIn: '1d' }
+    );
+    return { user, token };
+  }
+
+  async createAdmin(adminData) {
+    adminData.role = 'admin';
+    return await this.register(adminData);
+  }
+}
+
+module.exports = new AuthService();
+
+userService.js
+const UserDAL = require('../dal/userDal');
+
+class UserService {
+  async updateProfile(userId, profileData) {
+    return await UserDAL.updateById(userId, profileData);
+  }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await UserDAL.findById(userId);
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      throw new Error('Current password is incorrect');
+    }
+
+    if (newPassword.length < 11) {
+      throw new Error('Password must be at least 11 characters');
+    }
+
+    // Hash and save new password
+    user.password = newPassword;
+    await user.save(); // This triggers the pre-save hook
+    
+    return user;
+  }
+
+  async getUserById(userId) {
+    return await UserDAL.findById(userId);
+  }
+}
+
+module.exports = new UserService();
+
+app.js
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const config = require('./config');
+
+// Import routes
+const authRoutes = require('./routes/authRouter');
+const userRoutes = require('./routes/userRouter');
+const carRoutes = require('./routes/carRouter');
+const taxRoutes = require('./routes/taxRouter');
+const rentalRoutes = require('./routes/rentalRouter');
+
+// Initialize Express app
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Connect to MongoDB
+mongoose.connect(config.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/cars', carRoutes);
+app.use('/api/taxes', taxRoutes);
+app.use('/api/rentals', rentalRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
+
+app.listen(config.PORT, () => {
+  console.log(`Server running on port ${config.PORT}`);
+});
