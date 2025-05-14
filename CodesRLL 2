@@ -20,3 +20,43 @@ userSchema.pre('save', async function (next) {
 });
 
 module.exports = mongoose.model('User', userSchema);
+
+auth.js
+
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+const User = require('../models/userModel');
+
+module.exports = {
+  authenticate: async (req, res, next) => {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+
+    try {
+      const decoded = jwt.verify(token, config.JWT_SECRET);
+      const user = await User.findById(decoded.id);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+
+      req.user = {
+        id: user._id,
+        email: user.email,
+        role: user.role
+      };
+      next();
+    } catch (error) {
+      res.status(401).json({ message: 'Token is not valid' });
+    }
+  },
+
+  authorizeAdmin: (req, res, next) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    next();
+  }
+}
