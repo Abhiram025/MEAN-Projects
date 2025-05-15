@@ -41,3 +41,7 @@ async resetPassword(req, res) {
 
 userRoute.js
 router.put('/reset-password', userController.resetPassword);
+
+{
+    "message": "user.checkPassword is not a function"
+}
