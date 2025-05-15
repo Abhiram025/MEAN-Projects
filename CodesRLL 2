@@ -234,3 +234,44 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 
 module.exports = mongoose.model('User', userSchema);
+
+baseDal.js
+class BaseDAL {
+  constructor(model) {
+    this.model = model;
+  }
+
+  find(conditions = {}) {
+    return this.model.find(conditions);
+  }
+
+  async create(data) {
+    return await this.model.create(data);
+  }
+
+  findById(id) {
+    return this.model.findById(id);
+  }
+
+  async findByIdAndPopulate(id, populatePaths) {
+    return await this.model.findById(id).populate(populatePaths);
+  }
+
+  async findOne(conditions) {
+    return await this.model.findOne(conditions);
+  }
+
+  async find(conditions = {}) {
+    return await this.model.find(conditions);
+  }
+
+  async updateById(id, data) {
+    return await this.model.findByIdAndUpdate(id, data, { new: true });
+  }
+
+  async deleteById(id) {
+    return await this.model.findByIdAndDelete(id);
+  }
+}
+
+module.exports = BaseDAL;
