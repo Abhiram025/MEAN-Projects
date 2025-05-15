@@ -84,20 +84,18 @@ class UserController {
     }
   }
 
-  async resetPassword(req, res) {
+ async resetPasswordToken(req, res) {
     try {
-      const { email, newPassword, confirmPassword } = req.body;
-      if (!email || !newPassword || !confirmPassword) {
-        return res.status(400).json({ message: 'All fields are required' });
-      }
-      await UserService.resetPassword(req.user?.id, email, newPassword, confirmPassword);
-      res.status(200).json({ message: 'Password Reset is Successful' });
-    } catch (err) {
-      console.log("Password reset error: ", err.message);
-      const statusCode = err.message.includes('not found') ? 404 : 400;
-      res.status(statusCode).json({
-        message: err.message || 'Password reset failed'
-      });
+      const {token}=req.params;
+      const {newPassword, confirmPassword}=req.body;
+
+      await UserService.resetPasswordWithToken(token, newPassword, confirmPassword);
+      res.json({status:'success', message:'Password updated successfully'})
+    }
+    catch(err) {
+      console.log("you have got an error 2")
+      const statusCode=err.message.includes('token')?400:500;
+      res.status(statusCode).json({status:'error',message:err.message})
     }
   }
 }
@@ -142,23 +140,21 @@ class UserService {
     return resetToken
   }
 
-  async resetPasswordWithToken(token, newPassword, confirmPassword) {
-    if (newPassword !== confirmPassword) throw new Error("Passwords don't match")
-    if (newPassword.length < 8) throw new Error('Password must be atleast 8 characters')
+async resetPasswordWithToken(token, newPassword, confirmPassword) {
+    if (newPassword !== confirmPassword) throw new Error("Passwords don't match");
+    if (newPassword.length < 8) throw new Error('Password must be atleast 8 characters');
 
-    const hashedToken=crypto.createHash('sha256').update(token).digest('hex')
-    const user = await UserDAL.findOne({
-      passwordResetToken:hashedToken,
-      passwordResetExpires:{$gt:Date.now()}
-    });
+    const hashedToken=crypto.createHash('sha256').update(token).digest('hex');
+    const user = await UserDAL.findByResetToken(hashedToken);
+    console.log("level 2 is here")
     if (!user) throw new Error("Token is invalid or has expired")
 
-    const samePassword = await user.checkPassword(newPassword);//problem
-    if (samePassword) throw new Error("Cannot use previous password")
+    const samePassword = await user.comparePassword(newPassword);
+    if (samePassword) throw new Error("Cannot use previous password");
 
     user.password = newPassword;
-    user.passwordResetToken=undefined;
-    user.passwordResetExpires=undefined;
+    user.resetToken=undefined;
+    user.resetTokenExpiry=undefined;
 
     await user.save();
     return user;
@@ -218,22 +214,23 @@ userSchema.pre('save', async function (next) {
     next(err)
   }
 
+
 });
 
 
-userSchema.methods.createPasswordResetToken=()=>{
-  const resetToken=crypto.randomBytes(32).toString('hex');
-  this.resetToken=crypto.createHash('sha256').update(resetToken).digest('hex');
+userSchema.methods.createPasswordResetToken = () => {
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  this.resetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
+  this.resetTokenExpiry = Date.now()+ 10 * 60 * 1000;
   return resetToken;
 }
+
+
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-userSchema.methods.checkPassword = async function (candidateNewPassword) {
-  return await bcrypt.compare(candidateNewPassword, this.password);
-};
 
 module.exports = mongoose.model('User', userSchema);
