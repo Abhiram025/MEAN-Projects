@@ -4,13 +4,14 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { authenticate } = require('../middleware/auth');
 
+router.post('/forgot-password', userController.requestPasswordReset);
+router.patch('/reset-password/:token', userController.resetPasswordToken)
+
 router.use(authenticate);
 
 router.get('/profile', userController.getProfile);
 router.put('/profile', userController.updateProfile);
 router.put('/change-password', userController.changePassword);
-
-router.post('/request-password-reset', userController.requestPasswordReset);
 router.put('/reset-password', userController.resetPassword);
 
 module.exports = router;
@@ -56,22 +57,30 @@ class UserController {
       if (!email) {
         return res.status(400).json({ message: 'Email is required' });
       }
+      const resetToken=await UserService.requestPasswordReset(email);
 
-      // Generate and store a reset token (expires in 1 hour)
-      const resetToken = crypto.randomBytes(32).toString('hex');
-      const resetTokenExpiry = Date.now() + 3600000; // 1 hour
-
-      await UserService.createPasswordResetToken(email, resetToken, resetTokenExpiry);
-
-      // In reality, you would send this link via email
-      const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
-
-      res.json({
-        message: 'If this email exists, a reset link has been sent',
-        resetLink // Only for development/testing!
-      });
+      ers.json({
+        status:'success',
+        message:'Token sent to email',
+        token: resetToken//remove this in production
+      })
+      
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({status:'error', message: error.message });
+    }
+  }
+
+  async resetPasswordToken(req, res) {
+    try {
+      const {token}=req.params;
+      const {newPassword, confirmPassword}=req.body;
+
+      await UserService.resetPasswordWithToken(token, newPassword, confirmPassword);
+      res.json({status:'success', message:'Password updated successfully'})
+    }
+    catch(err) {
+      const statusCode=err.message.includes('Token')?400:500;
+      res.status(statusCode).json({status:'error',message:err.message})
     }
   }
 
@@ -81,7 +90,7 @@ class UserController {
       if (!email || !newPassword || !confirmPassword) {
         return res.status(400).json({ message: 'All fields are required' });
       }
-      await UserService.resetPasswordWithToken(req.user?.id, email, newPassword, confirmPassword);
+      await UserService.resetPassword(req.user?.id, email, newPassword, confirmPassword);
       res.status(200).json({ message: 'Password Reset is Successful' });
     } catch (err) {
       console.log("Password reset error: ", err.message);
@@ -94,6 +103,73 @@ class UserController {
 }
 
 module.exports = new UserController();
+
+userService.js
+const UserDAL = require('../dal/userDal');
+const { validate } = require('../models/userModel');
+const crypto=require('crypto')
+
+class UserService {
+  async updateProfile(userId, profileData) {
+    return await UserDAL.updateById(userId, profileData);
+  }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await UserDAL.findById(userId);
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      throw new Error('Current password is incorrect');
+    }
+
+    if (newPassword.length < 8) {
+      throw new Error('Password must be at least 8 characters');
+    }
+
+    // Hash and save new password
+    user.password = newPassword;
+    await user.save(); // This triggers the pre-save hook
+
+    return user;
+  }
+
+  async requestPasswordReset(email) {
+    const user = await UserDAL.findByEmail(email);
+    if (!user) return; // Don't reveal if email exists
+
+    const resetToken=user.createPasswordResetToken();
+    await user.save({validateBeforeSave: false});
+
+    return resetToken
+  }
+
+  async resetPasswordWithToken(token, newPassword, confirmPassword) {
+    if (newPassword !== confirmPassword) throw new Error("Passwords don't match")
+    if (newPassword.length < 8) throw new Error('Password must be atleast 8 characters')
+
+    const hashedToken=crypto.createHash('sha256').update(token).digest('hex')
+    const user = await UserDAL.findOne({
+      passwordResetToken:hashedToken,
+      passwordResetExpires:{$gt:Date.now()}
+    });
+    if (!user) throw new Error("Token is invalid or has expired")
+
+    const samePassword = await user.checkPassword(newPassword);//problem
+    if (samePassword) throw new Error("Cannot use previous password")
+
+    user.password = newPassword;
+    user.passwordResetToken=undefined;
+    user.passwordResetExpires=undefined;
+
+    await user.save();
+    return user;
+  }
+
+  async getUserById(userId) {
+    return await UserDAL.findById(userId);
+  }
+}
+
+module.exports = new UserService();
 
 userModel.js
 const mongoose = require('mongoose');
@@ -149,7 +225,6 @@ userSchema.methods.createPasswordResetToken=()=>{
   const resetToken=crypto.randomBytes(32).toString('hex');
   this.resetToken=crypto.createHash('sha256').update(resetToken).digest('hex');
 
-  this.resetTokenExpiry=Date.now()+10*60*1000;
   return resetToken;
 }
 
@@ -162,96 +237,3 @@ userSchema.methods.checkPassword = async function (candidateNewPassword) {
 };
 
 module.exports = mongoose.model('User', userSchema);
-
-userService.js
-const UserDAL = require('../dal/userDal');
-
-class UserService {
-  async updateProfile(userId, profileData) {
-    return await UserDAL.updateById(userId, profileData);
-  }
-
-  async changePassword(userId, currentPassword, newPassword) {
-    const user = await UserDAL.findById(userId);
-    const isMatch = await user.comparePassword(currentPassword);
-    if (!isMatch) {
-      throw new Error('Current password is incorrect');
-    }
-
-    if (newPassword.length < 8) {
-      throw new Error('Password must be at least 8 characters');
-    }
-
-    // Hash and save new password
-    user.password = newPassword;
-    await user.save(); // This triggers the pre-save hook
-
-    return user;
-  }
-
-  async createPasswordResetToken(email, token, expiry) {
-    const user = await UserDAL.findByEmail(email);
-    if (!user) return; // Don't reveal if email exists
-
-    user.resetToken = token;
-    user.resetTokenExpiry = expiry;
-    await user.save();
-  }
-
-  async resetPasswordWithToken(userId, email, newPassword, confirmPassword) {
-    const user = userId ? UserDAL.findById(userId) : UserDAL.findByEmail(email);
-    if (!user) throw new Error("User not found")
-
-    if (newPassword !== confirmPassword) throw new Error("Passwords don't match")
-    if (newPassword.length < 8) throw new Error('Password must be atleast 8 characters')
-
-    const samePassword = await user.checkPassword(newPassword);//problem
-    if (samePassword) throw new Error("Cannot use previous password")
-
-    user.password = newPassword;
-    await user.save();
-    return user;
-  }
-
-  async getUserById(userId) {
-    return await UserDAL.findById(userId);
-  }
-}
-
-module.exports = new UserService();
-
-middleware/auth.js
-const jwt = require('jsonwebtoken');
-const config = require('../config');
-
-module.exports = {
-  authenticate: (req, res, next) => {
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-    if (!authHeader) {
-      return res.status(401).json({ message: 'No token, authorization denied' });
-    }
-
-    const token=authHeader.replace(/^Bearer\s+/i, '')
-    console.log("Extracted token: ", token)//debug
-
-    if(!token) {
-      return res.status(401).json({message: 'No token, authorization denied'})
-    }
-    try {
-      const decoded = jwt.verify(token, config.JWT_SECRET);
-      console.log('Decoded Token Payload: ', decoded)//debug
-      req.user = decoded;
-      next();
-    } catch (error) {
-      console.error('JWT Verification Error: ', error)//debug
-      res.status(401).json({ message: 'Token is not valid' });
-    }
-  },
-
-  authorizeAdmin: (req, res, next) => {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
-    next();
-  }
-};
