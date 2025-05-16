@@ -328,3 +328,12 @@ module.exports = {
     next();
   }
 };
+
+{
+    "_id": "6826f3af8f4eadd01b112946",
+    "imageUrl":[
+        "assets/honda[0].jfif",
+        "assets/honda[1].jfif",
+        "assets/honda[2].jfif"
+    ]
+}
