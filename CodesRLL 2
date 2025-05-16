@@ -1,22 +1,139 @@
-import { Injectable } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { SharedService } from '../shared.service';
+import { CarService } from '../car.service';
 
-@Injectable({
-  providedIn: 'root'
+interface Car {
+  _id: string;
+  make: string;
+  model: string;
+  carCategory: 'economy' | 'premier' | 'luxury';
+  pricePerKm: number;
+  pricePerDay: number;
+  imageUrl: string;
+  gearType: 'manual' | 'automatic';
+  userDistance?: number;
+  rentalDays?: number;
+  loyaltyPoints?: number;
+  extraDiscountRides?: number;
+  details?: string;
+}
+
+@Component({
+  selector: 'app-carlist',
+  templateUrl: './carlist.component.html',
+  styleUrls: ['./carlist.component.css']
 })
-export class SharedService {
-  private city: string = '';
-  private carname: string = '';
-  private car1:string='';
+export class CarlistComponent implements OnInit {
+  selectedType: string = 'all';
+  selectedGearType: string = 'all';
+  city: string = 'All';
+  carname: string = '';
+  car1: string = '';
+  cars: Car[] = [];
+  isLoading: boolean = false;
 
-  // Method to set both city and carname
-  setCityAndCar(city: string, carname: string, car1:string): void {
-    this.city = city;
-    this.carname = carname;
-    this.car1=car1;
+  constructor(
+    private sharedService: SharedService,
+    private carService: CarService
+  ) {}
+
+  ngOnInit(): void {
+    const { city, carname, car1 } = this.sharedService.getCityAndCar();
+    this.city = city || 'All';
+    this.carname = carname || '';
+    this.car1 = car1 || '';
+    
+    this.loadCars();
   }
 
-  // Method to get both city and carname
-  getCityAndCar(): { city: string, carname: string, car1:string } {
-    return { city: this.city, carname: this.carname, car1: this.car1 };
+  loadCars(): void {
+    this.isLoading = true;
+    const observable = this.selectedType === 'all' 
+      ? this.carService.getAvailableCars() 
+      : this.carService.getCarsByType(this.selectedType);
+
+    observable.subscribe({
+      next: (cars: Car[]) => {
+        this.cars = cars.map(car => ({
+          ...car,
+          userDistance: null,
+          rentalDays: null,
+          loyaltyPoints: 0,
+          extraDiscountRides: 0,
+          details: this.generateCarDetails(car)
+        }));
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error loading cars:', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  generateCarDetails(car: Car): string {
+    switch(car.carCategory) {
+      case 'economy':
+        return 'Economical and fuel-efficient';
+      case 'premier':
+        return 'Comfortable and spacious';
+      case 'luxury':
+        return 'Luxury and high performance';
+      default:
+        return 'Car available for rent';
+    }
+  }
+
+  get filteredCars(): Car[] {
+    return this.cars.filter(car => 
+      (this.selectedGearType === 'all' || car.gearType === this.selectedGearType)
+    );
+  }
+
+  calculateRentalCost(car: Car): number {
+    if (!car.userDistance || !car.rentalDays) return 0;
+
+    const baseCost = car.pricePerKm * car.userDistance;
+    let totalCost = baseCost;
+
+    // Add daily rental cost (excluding first day which is included in distance cost)
+    if (car.rentalDays > 1) {
+      totalCost += car.pricePerDay * (car.rentalDays - 1);
+    }
+
+    // Apply discounts based on category
+    if (car.extraDiscountRides && car.extraDiscountRides > 0) {
+      totalCost *= 0.9; // 10% discount
+    }
+
+    return totalCost;
+  }
+
+  calculateLoyaltyPoints(car: Car): void {
+    if (!car.userDistance) return;
+    
+    const points = Math.floor(car.userDistance / 50);
+    car.loyaltyPoints = (car.loyaltyPoints || 0) + points;
+
+    if (car.loyaltyPoints >= 25) {
+      car.extraDiscountRides = 2;
+      car.loyaltyPoints -= 25;
+    }
+  }
+
+  bookCar(car: Car): void {
+    if (!car.userDistance || !car.rentalDays) return;
+    
+    const cost = this.calculateRentalCost(car);
+    alert(`Booking confirmed for ${car.make} ${car.model}!
+           Distance: ${car.userDistance} km
+           Days: ${car.rentalDays}
+           Total Cost: ₹${cost.toFixed(2)}
+           Loyalty Points: ${car.loyaltyPoints}
+           Extra Discount Rides: ${car.extraDiscountRides || 0}`);
+  }
+
+  onTypeChange(): void {
+    this.loadCars();
   }
 }
