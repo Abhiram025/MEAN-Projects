@@ -1,131 +1,226 @@
-you have my codes right in this when i selected location, pickup date and droppping date and carCategory when we give these values the buttons below will be enabled for eg:- if we select premier in carCategory SUV and honda buttons will be enabled and below the respective car details get generated in that the image must be generated from the backend (for now im not passing image in database so use alt image) there are few details next to car image in that render model name (which is in bold) next features[2] beside luggages, then features[1] and features[3] and if we click on book now it will go to the page where SUV cars will be generated i gave details of suv cars in mongodb so use those details for rendering manual and automatic and top of the page there must be lcoation selected in the previous page but not stored in the backend and car model render it from the backend in this xample it is suv so suv is rendered this is the code for vehicleTypes page
+carModel.js
+const mongoose = require('mongoose');
+
+const carSchema = new mongoose.Schema({
+  make: { type: String, required: true },
+  model: { type: String, required: true },
+  cartype: { 
+    type: String, 
+    required: true,
+    enum: ['hyundai', 'sedan', 'suv', 'force', 'honda'] 
+  },
+  carCategory: { 
+    type: String, 
+    required: true,
+    enum: ['economy', 'premier', 'luxury'] 
+  },
+  year: { type: Number, required: true },
+  pricePerKm: { 
+    type: Number,
+    required: true,
+    min: [0.01, 'Price per km must be positive'], // Minimum 0.01
+    validate: {
+      validator: Number.isFinite,
+      message: 'Price per km must be a valid number'
+    }
+   },
+  pricePerDay: { 
+    type: Number,
+    required: true,
+    min: [0.01, 'Price per day must be positive'], // Minimum 0.01
+    validate: {
+      validator: Number.isFinite,
+      message: 'Price per day must be a valid number'
+    }
+  },
+  availabilityStatus: { 
+    type: String, 
+    enum: ['available', 'rented', 'maintenance'], 
+    default: 'available' 
+  },
+  currentOdometer: { type: Number, required: true },
+  imageUrl: [String],
+  features: [String]
+}, { timestamps: true });
 
 
-vehicleTypes.component.html
-<html>
+module.exports = mongoose.model('Car', carSchema);
 
-<h1 style="text-align: center; margin-top: 100px;">Vehicle Models</h1>
-<p style="text-align: center;font-size:18px; font-family: Arial, Helvetica, sans-serif;color:silver">Our
-    rental fleet. To contribute to positive change and achieve our sustainability goals with many extraordinary.</p>
+carRouter.js
+const express = require('express');
+const router = express.Router();
+const carController = require('../controllers/carController');
+const { authenticate } = require('../middleware/auth');
 
+// Public routes
+router.get('/', carController.getAvailableCars);
+router.get('/:id', carController.getCarById);
+router.get('/type/:cartype', carController.getCarsByType);
 
-<!-- selecting a location -->
-<div class="selectlocation1">
-    <label style="font-size: 20px;">Select Location:</label>
-    <select [(ngModel)]="selectlocation">
-        <option value="" disabled hidden>select location</option>
-        <option *ngFor="let location of locations">{{location}}</option>
-    </select>
-</div>
+// Admin-only routes
+router.use(authenticate);
+router.post('/', carController.createCar);
+router.put('/:id', carController.updateCar);
+router.delete('/:id', carController.deleteCar);
 
+module.exports = router;
 
-<!-- pickup date -->
-<div class="date">
-    <label>Pickup Date:</label>
-    <input type="date" [min]='today' [(ngModel)]="pickupdate"
-        style="height: 20px;font-size: 16px;font-family: Arial, Helvetica, sans-serif;">
+carController.js
+const CarService = require('../services/carService');
 
-    <!-- return date -->
+class CarController {
+  async createCar(req, res) {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      const car = await CarService.createCar(req.body);
+      res.status(201).json(car);
+    } catch (error) {
+      console.log("you are not admin")
+      res.status(400).json({ message: error.message });
+    }
+  }
 
-    <label style="padding-left: 10px;">Return Date:</label>
-    <input type="date" [min]='pickupdate' [(ngModel)]="returndate"
-        style="height: 20px; font-size: 16px;font-family: Arial, Helvetica, sans-serif;">
-</div>
+  async updateCar(req, res) {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      const car = await CarService.updateCar(req.params.id, req.body);
+      res.json(car);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 
-<!-- selectcategory -->
+  async deleteCar(req, res) {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      await CarService.deleteCar(req.params.id);
+      res.json({ message: 'Car deleted successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 
-<div style="margin-left:48%;margin-top: 25px;" class="category">
-    <select [(ngModel)]="selectcategory" (change)="oncategorychange()">
+  async getAvailableCars(req, res) {
+    try {
+      const cars = await CarService.getAvailableCars();
+      res.json(cars);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 
-        <option value='' disabled hidden>select category</option>
-        <option *ngFor="let category of categories">{{category}}</option>
-    </select>
-</div>
+  async getCarsByType(req, res) {
+    try {
+      const cars = await CarService.getCarsByType(req.params.cartype);
+      res.json(cars);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 
-
-
-<!-- display car buttons -->
-<div class="car1">
-    <button *ngFor="let car of cars" [disabled]="car.category!=selectcategory" (click)="selectcar(car)">
-        {{car.name}}
-    </button>
-</div>
-
-
-
-<!-- it will check if selectedcars variable  is empty or not if not empty then it will display selected car image  -->
-<div *ngIf='selectedcars' class="car2">
-    <div>
-        <img [src]="selectedcars.photo" alt="{{selectedcars.name}}" class="c2">
-    </div>
-
-    <div class="cardetails">
-        <h3>{{selectedcars.name}}</h3>
-        <ul>
-
-            <li> <b style="color: green;">Luggage: </b>{{selectedcars.Luggage}}</li><br>
-            <li><b style="color: green;"> Model: </b>{{selectedcars.Model}}</li><br>
-            <li><b style="color: green;">Milage: </b> {{selectedcars.milage}}KM</li><br>
-            <li><b style="color: green;">Re-Fund: </b>Full repayment</li>
-            <p></p>
-            <button (click)="booknow()" [disabled]="!formvalid()">BookNow</button>
-        </ul>
-
-    </div>
-</div>
-
-</html>
-
-vehicleTypes.component.ts
-import { Component} from '@angular/core';
-import { Router } from '@angular/router';
-import { SharedService } from '../shared.service';
-
-@Component({
-  selector: 'app-vehicletypes',
-  templateUrl: './vehicletypes.component.html',
-  styleUrls: ['./vehicletypes.component.css']
-})
-export class VehicletypesComponent {
-  locations: string[] = ["Banglore", "Chennai", "Hyderbad", "Mumbai"]; //for locations i have created array
-  selectlocation: string = ''; 
-  pickupdate: string = ''; //we need to type here yyyy-mm-dd format
-  today: string = new Date().toISOString().split('T')[0]; //it will give current date
-  returndate: string = '';
-
-constructor( private router: Router, private sharedService: SharedService) {
-
+  async getCarById(req, res) {
+    try {
+      const car = await CarService.getCarById(req.params.id);
+      res.json(car);
+    } catch (error) {
+      res.status(404).json({ message: error.message });
+    }
+  }
 }
-formvalid() {
-    return (this.selectlocation && this.pickupdate &&this.returndate && this.selectcategory );
+
+module.exports = new CarController();
+
+carService.js
+const CarDAL = require('../dal/carDal');
+
+class CarService {
+  async createCar(carData) {
+    return await CarDAL.create(carData);
   }
 
-cars: any[] = [
-    { name: 'SUV', category:'premier', Model: 2023, Luggage: '2 bags', milage: 30, photo: '/assets/Suv.jfif' },
-    { name: 'Sedan',category:'economy', Model: 2022, Luggage: '6 bags', milage: 20, photo: '/assets/sedan.jpg' },
-    { name: 'Hyundai',category:'economy', Model: 2021, Luggage: '3 bags', milage: 25, photo: '/assets/Hyundai.webp' },
-    { name: 'Honda', category:'premier',Model: 2020, Luggage: '4 bags', milage: 35, photo: '/assets/honda.jfif' },
-    { name: 'Force', category:'luxury',Model: 2016, Luggage: '6 bags', milage: 40, photo: '/assets/Tempo1.jpg' }
-  ];
-  
-
-categories:string[]=['economy','premier','luxury'];
-
-selectcategory:string='';
-filteredcars:any[]=[];
-selectedcars: any = this.cars[0];
-
-oncategorychange() {
-  
-    this.filteredcars=this.cars.filter(car=>car.category==this.selectcategory);
-    this.selectedcars=this.filteredcars[0];
+  async updateCar(carId, carData) {
+    return await CarDAL.updateById(carId, carData);
   }
-public selectcar(car: any) {
-    this.selectedcars = car;
+
+  async deleteCar(carId) {
+    return await CarDAL.deleteById(carId);
   }
-    public booknow() {
-    this.sharedService.setCityAndCar(this.selectlocation, this.selectedcars.name, this.selectcategory);
-    // console.log('City and Car set in shared service:', this.selectlocation, this.selectedcars.name,this.selectcategory);
-    this.router.navigate(['/carlist']);
+
+  async getAvailableCars() {
+    return await CarDAL.findAvailableCars();
+  }
+
+  async getCarsByType(carType) {
+    return await CarDAL.findByType(carType);
+  }
+
+  async getCarById(carId) {
+    return await CarDAL.findById(carId);
   }
 }
+
+module.exports = new CarService();
+
+carDal.js
+const BaseDAL = require('./baseDal');
+const Car = require('../models/carModel');
+
+class CarDAL extends BaseDAL {
+  constructor() {
+    super(Car);
+  }
+
+  async findAvailableCars() {
+    return await this.find({ availabilityStatus: 'available' });
+  }
+
+  async findByType(carType) {
+    return await this.find({ cartype: { $regex: new RegExp(`^${carType}$`, 'i') }, availabilityStatus: 'available' });
+  }
+}
+
+module.exports = new CarDAL();
+
+auth.js
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+
+module.exports = {
+  authenticate: (req, res, next) => {
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    if (!authHeader) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+
+    const token=authHeader.replace(/^Bearer\s+/i, '')
+    console.log("Extracted token: ", token)//debug
+
+    if(!token) {
+      return res.status(401).json({message: 'No token, authorization denied'})
+    }
+    try {
+      const decoded = jwt.verify(token, config.JWT_SECRET);
+      console.log('Decoded Token Payload: ', decoded)//debug
+      req.user = decoded;
+      next();
+    } catch (error) {
+      console.error('JWT Verification Error: ', error)//debug
+      res.status(401).json({ message: 'Token is not valid' });
+    }
+  },
+
+  authorizeAdmin: (req, res, next) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    next();
+  }
+};
+
+these are the codes used to mess with cars database like fetching creating and deleting i just want to store images in imageUrl how to do it from backend like postman 
