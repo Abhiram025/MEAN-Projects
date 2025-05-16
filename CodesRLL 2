@@ -224,3 +224,16 @@ module.exports = {
 };
 
 these are the codes used to mess with cars database like fetching creating and deleting i just want to store images in imageUrl how to do it from backend like postman 
+
+
+{
+    "imageUrl":[
+        "assets/honda[0].jfif",
+        "assets/honda[1].jfif",
+        "assets/honda[2].jfif"
+    ]
+}
+
+{
+    "message": "Cast to ObjectId failed for value \"{ imageUrl: [] }\" (type Object) at path \"_id\" for model \"Car\""
+}
