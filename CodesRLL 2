@@ -51,6 +51,19 @@ const express = require('express');
 const router = express.Router();
 const carController = require('../controllers/carController');
 const { authenticate } = require('../middleware/auth');
+const multer=require('multer');
+
+const storage=multer.diskStorage({
+    destination: function(req,file,cb) {
+        cb(null, 'uploads/')
+    },
+    filename: function(req,file,cb) {
+        cb(null,Date.now()+'-'+file.originalname)
+    }
+});
+
+const upload=multer({storage: storage})
+
 
 // Public routes
 router.get('/', carController.getAvailableCars);
@@ -59,14 +72,15 @@ router.get('/type/:cartype', carController.getCarsByType);
 
 // Admin-only routes
 router.use(authenticate);
-router.post('/', carController.createCar);
-router.put('/:id', carController.updateCar);
+router.post('/', upload.array('images', 5) ,carController.createCar);
+router.put('/:id', upload.array('images', 5) ,carController.updateCar);
 router.delete('/:id', carController.deleteCar);
 
 module.exports = router;
 
 carController.js
 const CarService = require('../services/carService');
+const path=require('path')
 
 class CarController {
   async createCar(req, res) {
@@ -74,7 +88,10 @@ class CarController {
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Forbidden' });
       }
-      const car = await CarService.createCar(req.body);
+
+      const imageUrls = req.files ? req.files.map(file => file.path) : [];
+      const carData = { ...req.body, imageUrl: imageUrls }
+      const car = await CarService.createCar(carData);
       res.status(201).json(car);
     } catch (error) {
       console.log("you are not admin")
@@ -87,7 +104,10 @@ class CarController {
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Forbidden' });
       }
-      const car = await CarService.updateCar(req.params.id, req.body);
+
+      const imageUrls = req.files ? req.files.map(file => file.path) : [];
+      const carData = { ...req.body, imageUrl: imageUrls }
+      const car = await CarService.updateCar(req.params.id, carData);
       res.json(car);
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -187,6 +207,92 @@ class CarDAL extends BaseDAL {
 
 module.exports = new CarDAL();
 
+baseDal.js
+class BaseDAL {
+  constructor(model) {
+    this.model = model;
+  }
+
+  find(conditions = {}) {
+    return this.model.find(conditions);
+  }
+
+  async create(data) {
+    return await this.model.create(data);
+  }
+
+  findById(id) {
+    return this.model.findById(id);
+  }
+
+  async findByIdAndPopulate(id, populatePaths) {
+    return await this.model.findById(id).populate(populatePaths);
+  }
+
+  async findOne(conditions) {
+    return await this.model.findOne(conditions);
+  }
+
+  async find(conditions = {}) {
+    return await this.model.find(conditions);
+  }
+
+  async updateById(id, data) {
+    return await this.model.findByIdAndUpdate(id, data, { new: true });
+  }
+
+  async deleteById(id) {
+    return await this.model.findByIdAndDelete(id);
+  }
+}
+
+module.exports = BaseDAL;
+
+app.js
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const config = require('./config');
+const path=require('path')
+
+// Import routes
+const authRoutes = require('./routes/authRouter');
+const userRoutes = require('./routes/userRouter');
+const carRoutes = require('./routes/carRouter');
+const taxRoutes = require('./routes/taxRouter');
+const rentalRoutes = require('./routes/rentalRouter');
+
+// Initialize Express app
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
+// Connect to MongoDB
+mongoose.connect(config.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/cars', carRoutes);
+app.use('/api/taxes', taxRoutes);
+app.use('/api/rentals', rentalRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
+
+app.listen(config.PORT, () => {
+  console.log(`Server running on port ${config.PORT}`);
+});
+
+
 auth.js
 const jwt = require('jsonwebtoken');
 const config = require('../config');
@@ -222,18 +328,3 @@ module.exports = {
     next();
   }
 };
-
-these are the codes used to mess with cars database like fetching creating and deleting i just want to store images in imageUrl how to do it from backend like postman 
-
-
-{
-    "imageUrl":[
-        "assets/honda[0].jfif",
-        "assets/honda[1].jfif",
-        "assets/honda[2].jfif"
-    ]
-}
-
-{
-    "message": "Cast to ObjectId failed for value \"{ imageUrl: [] }\" (type Object) at path \"_id\" for model \"Car\""
-}
