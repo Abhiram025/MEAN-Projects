@@ -1,198 +1,22 @@
-// car.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-
-interface Car {
-  _id: string;
-  make: string;
-  model: string;
-  carCategory: 'economy' | 'premier' | 'luxury';
-  pricePerKm: number;
-  pricePerDay: number;
-  imageUrl: string;
-  gearType: 'manual' | 'automatic';
-  // Add other fields as needed
-}
 
 @Injectable({
   providedIn: 'root'
 })
-export class CarService {
-  private apiUrl = 'http://localhost:3000/api/cars'; // Adjust to your backend URL
+export class SharedService {
+  private city: string = '';
+  private carname: string = '';
+  private car1:string='';
 
-  constructor(private http: HttpClient) {}
-
-  getAvailableCars(): Observable<Car[]> {
-    return this.http.get<Car[]>(`${this.apiUrl}/`);
-  }
-
-  getCarsByType(carType: string): Observable<Car[]> {
-    return this.http.get<Car[]>(`${this.apiUrl}/type/${carType}`);
-  }
-}
-
-//app.module.ts
-import { HttpClientModule } from '@angular/common/http';
-
-@NgModule({
-  declarations: [
-    // your components
-  ],
-  imports: [
-    BrowserModule,
-    HttpClientModule,
-    FormsModule // for ngModel
-    // other modules
-  ],
-  providers: [],
-  bootstrap: [AppComponent]
-})
-export class AppModule { }
-
-<div class="container">
-    <h1>Car Rental</h1>
-    <h1>LOCATION: {{city}}</h1>
-    <h1>CAR-MODEL: {{carname}}</h1>
-
-    <!-- Filters Section -->
-    <div class="filters">
-        <div class="form-group">
-            <label for="car-type">Select Car Category:</label>
-            <select id="car-type" [(ngModel)]="selectedType" (change)="onTypeChange()" class="form-control">
-                <option value="all">All</option>
-                <option value="economy">Economy</option>
-                <option value="premier">Premier</option>
-                <option value="luxury">Luxury</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="gear-type">Select Gear Type:</label>
-            <select id="gear-type" [(ngModel)]="selectedGearType" class="form-control">
-                <option value="all">All</option>
-                <option value="manual">Manual</option>
-                <option value="automatic">Automatic</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- Loading Indicator -->
-    <div *ngIf="isLoading" class="loading">Loading cars...</div>
-
-    <!-- Car Listings Section -->
-    <div class="row">
-        <div class="car-card" *ngFor="let car of filteredCars">
-            <img [src]="car.imageUrl" alt="Car image" *ngIf="car.imageUrl">
-            <div class="caption">
-                <h3>{{car.make}} {{car.model}}</h3>
-                <div class="form-group">
-                    <label for="distance-{{ car._id }}">Enter Distance (in km):</label>
-                    <input type="number" id="distance-{{ car._id }}" [(ngModel)]="car.userDistance" 
-                           class="form-control" placeholder="Enter distance" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label for="days-{{ car._id }}">Enter Rental Days:</label>
-                    <input type="number" id="days-{{ car._id }}" [(ngModel)]="car.rentalDays" 
-                           class="form-control" placeholder="Enter rental days" min="0" required>
-                </div>
-                <p>Category: {{ car.carCategory | titlecase }}</p>
-                <p>Gear Type: {{ car.gearType | titlecase }}</p>
-                <p>Price per km: ₹{{ car.pricePerKm }}</p>
-                <p>Price per day: ₹{{ car.pricePerDay }}</p>
-                <p>Rental Cost: ₹{{ calculateRentalCost(car) | number:'1.2-2' }}</p>
-                <p>Extra Discount Rides: {{ car.extraDiscountRides || 0 }}</p>
-                <button class="btn btn-primary" 
-                        [disabled]="!car.userDistance || !car.rentalDays" 
-                        (click)="calculateLoyaltyPoints(car); bookCar(car)">
-                    Book Now
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-// carlist.component.ts
-import { Component, OnInit } from '@angular/core';
-import { CarService } from '../car.service';
-import { SharedService } from '../shared.service';
-
-@Component({
-  selector: 'app-carlist',
-  templateUrl: './carlist.component.html',
-  styleUrls: ['./carlist.component.css']
-})
-export class CarlistComponent implements OnInit {
-  selectedType: string = 'all';
-  selectedGearType: string = 'all';
-  city: string = 'All';
-  carname: string = '';
-  car1: string = '';
-  cars: any[] = [];
-  isLoading: boolean = false;
-
-  constructor(
-    private sharedService: SharedService,
-    private carService: CarService
-  ) {}
-
-  ngOnInit(): void {
-    const { city, carname, car1 } = this.sharedService.getCityAndCar();
+  // Method to set both city and carname
+  setCityAndCar(city: string, carname: string, car1:string): void {
     this.city = city;
     this.carname = carname;
-    this.car1 = car1;
-    
-    // Load initial cars
-    this.loadCars();
+    this.car1=car1;
   }
 
-  loadCars(): void {
-    this.isLoading = true;
-    if (this.selectedType === 'all') {
-      this.carService.getAvailableCars().subscribe({
-        next: (cars) => {
-          this.cars = cars.map(car => ({
-            ...car,
-            userDistance: null,
-            rentalDays: null,
-            loyaltyPoints: 0,
-            extraDiscountRides: 0
-          }));
-          this.isLoading = false;
-        },
-        error: (err) => {
-          console.error('Error loading cars:', err);
-          this.isLoading = false;
-        }
-      });
-    } else {
-      this.carService.getCarsByType(this.selectedType).subscribe({
-        next: (cars) => {
-          this.cars = cars.map(car => ({
-            ...car,
-            userDistance: null,
-            rentalDays: null,
-            loyaltyPoints: 0,
-            extraDiscountRides: 0
-          }));
-          this.isLoading = false;
-        },
-        error: (err) => {
-          console.error('Error loading cars by type:', err);
-          this.isLoading = false;
-        }
-      });
-    }
+  // Method to get both city and carname
+  getCityAndCar(): { city: string, carname: string, car1:string } {
+    return { city: this.city, carname: this.carname, car1: this.car1 };
   }
-
-  onTypeChange(): void {
-    this.loadCars();
-  }
-
-
-get filteredCars(): Car[] {
-  return this.cars.filter(car => 
-    (this.selectedGearType === 'all' || car.gearType === this.selectedGearType)
-  );
-}
-  
 }
