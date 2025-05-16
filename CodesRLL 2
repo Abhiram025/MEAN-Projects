@@ -1,66 +1,131 @@
-<div class="container">
-    <h1>Car Rental</h1>
-    <h1>LOCATION: {{city}}</h1>
-    <h1>CAR-MODEL: {{carname}}</h1>
+you have my codes right in car card what i want to display is car make in bold and in the next line car model, cartype, carCategory, rental start date and end date which also you will get from vehicle type component code and features array[0] at gear type take it from the vehicle type codes retain price per day and km also remove rental cost, extra discount rides remove distance and rental days text fields
+also i want to display the cars in carlist component based on the filters i give in vehicle component like if i select an premier, SUV car and click on book now in carlist page only SUV cars must be displayed of manual and automatic gear type use same car details for both gear types i will give you the code so first tell me what you uunderstood and if i say yse start modifying the code and if you need any code from the backend tell me also forget about images for now
 
-    <!-- Filters Section -->
-    <div class="filters">
-        <div class="form-group">
-            <label for="car-type">Select Car Category:</label>
-            <select id="car-type" [(ngModel)]="selectedType" (change)="onTypeChange()" class="form-control">
-                <option value="all">All</option>
-                <option value="economy">Economy</option>
-                <option value="premier">Premier</option>
-                <option value="luxury">Luxury</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="gear-type">Select Gear Type:</label>
-            <select id="gear-type" [(ngModel)]="selectedGearType" class="form-control">
-                <option value="all">All</option>
-                <option value="manual">Manual</option>
-                <option value="automatic">Automatic</option>
-            </select>
-        </div>
+vehicleTypes.component.html
+<html>
+
+<h1 style="text-align: center; margin-top: 100px;">Vehicle Models</h1>
+<p style="text-align: center;font-size:18px; font-family: Arial, Helvetica, sans-serif;color:silver">Our
+    rental fleet. To contribute to positive change and achieve our sustainability goals with many extraordinary.</p>
+
+
+<!-- selecting a location -->
+<div class="selectlocation1">
+    <label style="font-size: 20px;">Select Location:</label>
+    <select [(ngModel)]="selectlocation">
+        <option value="" disabled hidden>select location</option>
+        <option *ngFor="let location of locations">{{location}}</option>
+    </select>
+</div>
+
+
+<!-- pickup date -->
+<div class="date">
+    <label>Pickup Date:</label>
+    <input type="date" [min]='today' [(ngModel)]="pickupdate"
+        style="height: 20px;font-size: 16px;font-family: Arial, Helvetica, sans-serif;">
+
+    <!-- return date -->
+
+    <label style="padding-left: 10px;">Return Date:</label>
+    <input type="date" [min]='pickupdate' [(ngModel)]="returndate"
+        style="height: 20px; font-size: 16px;font-family: Arial, Helvetica, sans-serif;">
+</div>
+
+<!-- selectcategory -->
+
+<div style="margin-left:48%;margin-top: 25px;" class="category">
+    <select [(ngModel)]="selectcategory" (change)="oncategorychange()">
+
+        <option value='' disabled hidden>select category</option>
+        <option *ngFor="let category of categories">{{category}}</option>
+    </select>
+</div>
+
+
+
+<!-- display car buttons -->
+<div class="car1">
+    <button *ngFor="let car of cars" [disabled]="car.category!=selectcategory" (click)="selectcar(car)">
+        {{car.name}}
+    </button>
+</div>
+
+
+
+<!-- it will check if selectedcars variable  is empty or not if not empty then it will display selected car image  -->
+<div *ngIf='selectedcars' class="car2">
+    <div>
+        <img [src]="selectedcars.photo" alt="{{selectedcars.name}}" class="c2">
     </div>
 
-    <!-- Loading Indicator -->
-    <div *ngIf="isLoading" class="loading">Loading cars...</div>
+    <div class="cardetails">
+        <h3>{{selectedcars.name}}</h3>
+        <ul>
 
-    <!-- No Cars Found -->
-    <div *ngIf="!isLoading && filteredCars.length === 0" class="no-cars">
-        No cars available matching your criteria
-    </div>
+            <li> <b style="color: green;">Luggage: </b>{{selectedcars.Luggage}}</li><br>
+            <li><b style="color: green;"> Model: </b>{{selectedcars.Model}}</li><br>
+            <li><b style="color: green;">Milage: </b> {{selectedcars.milage}}KM</li><br>
+            <li><b style="color: green;">Re-Fund: </b>Full repayment</li>
+            <p></p>
+            <button (click)="booknow()" [disabled]="!formvalid()">BookNow</button>
+        </ul>
 
-    <!-- Car Listings Section -->
-    <div class="row">
-        <div class="car-card" *ngFor="let car of filteredCars">
-            <img [src]="car.imageUrl" alt="{{car.make}} {{car.model}}" *ngIf="car.imageUrl">
-            <div class="caption">
-                <h3>{{car.make}} {{car.model}}</h3>
-                <div class="form-group">
-                    <label [for]="'distance-' + car._id">Enter Distance (in km):</label>
-                    <input type="number" [id]="'distance-' + car._id" [(ngModel)]="car.userDistance" 
-                           class="form-control" placeholder="Enter distance" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label [for]="'days-' + car._id">Enter Rental Days:</label>
-                    <input type="number" [id]="'days-' + car._id" [(ngModel)]="car.rentalDays" 
-                           class="form-control" placeholder="Enter rental days" min="0" required>
-                </div>
-                <p>Details: {{car.details}}</p>
-                <p>Category: {{car.carCategory | titlecase}}</p>
-                <p>Gear Type: {{car.gearType | titlecase}}</p>
-                <p>Price per km: ₹{{car.pricePerKm | number}}</p>
-                <p>Price per day: ₹{{car.pricePerDay | number}}</p>
-                <p>Rental Cost: ₹{{calculateRentalCost(car) | number:'1.2-2'}}</p>
-                <p>Extra Discount Rides: {{car.extraDiscountRides || 0}}</p>
-                <button class="btn btn-primary" 
-                        [disabled]="!car.userDistance || !car.rentalDays" 
-                        (click)="calculateLoyaltyPoints(car); bookCar(car)">
-                    Book Now
-                </button>
-            </div>
-        </div>
     </div>
 </div>
+
+</html>
+
+vehicleTypes.component.ts
+import { Component} from '@angular/core';
+import { Router } from '@angular/router';
+import { SharedService } from '../shared.service';
+
+@Component({
+  selector: 'app-vehicletypes',
+  templateUrl: './vehicletypes.component.html',
+  styleUrls: ['./vehicletypes.component.css']
+})
+export class VehicletypesComponent {
+  locations: string[] = ["Banglore", "Chennai", "Hyderbad", "Mumbai"]; //for locations i have created array
+  selectlocation: string = ''; 
+  pickupdate: string = ''; //we need to type here yyyy-mm-dd format
+  today: string = new Date().toISOString().split('T')[0]; //it will give current date
+  returndate: string = '';
+
+constructor( private router: Router, private sharedService: SharedService) {
+
+}
+formvalid() {
+    return (this.selectlocation && this.pickupdate &&this.returndate && this.selectcategory );
+  }
+
+cars: any[] = [
+    { name: 'SUV', category:'premier', Model: 2023, Luggage: '2 bags', milage: 30, photo: '/assets/Suv.jfif' },
+    { name: 'Sedan',category:'economy', Model: 2022, Luggage: '6 bags', milage: 20, photo: '/assets/sedan.jpg' },
+    { name: 'Hyundai',category:'economy', Model: 2021, Luggage: '3 bags', milage: 25, photo: '/assets/Hyundai.webp' },
+    { name: 'Honda', category:'premier',Model: 2020, Luggage: '4 bags', milage: 35, photo: '/assets/honda.jfif' },
+    { name: 'Force', category:'luxury',Model: 2016, Luggage: '6 bags', milage: 40, photo: '/assets/Tempo1.jpg' }
+  ];
+  
+
+categories:string[]=['economy','premier','luxury'];
+
+selectcategory:string='';
+filteredcars:any[]=[];
+selectedcars: any = this.cars[0];
+
+oncategorychange() {
+  
+    this.filteredcars=this.cars.filter(car=>car.category==this.selectcategory);
+    this.selectedcars=this.filteredcars[0];
+  }
+public selectcar(car: any) {
+    this.selectedcars = car;
+  }
+    public booknow() {
+    this.sharedService.setCityAndCar(this.selectlocation, this.selectedcars.name, this.selectcategory);
+    // console.log('City and Car set in shared service:', this.selectlocation, this.selectedcars.name,this.selectcategory);
+    this.router.navigate(['/carlist']);
+  }
+}
