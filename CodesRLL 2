@@ -1,3 +1,141 @@
+app.js
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const config = require('./config');
+const path=require('path')
+
+// Import routes
+const authRoutes = require('./routes/authRouter');
+const userRoutes = require('./routes/userRouter');
+const carRoutes = require('./routes/carRouter');
+const taxRoutes = require('./routes/taxRouter');
+const rentalRoutes = require('./routes/rentalRouter');
+
+// Initialize Express app
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Connect to MongoDB
+mongoose.connect(config.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/cars', carRoutes);
+app.use('/api/taxes', taxRoutes);
+app.use('/api/rentals', rentalRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
+
+app.listen(config.PORT, () => {
+  console.log(`Server running on port ${config.PORT}`);
+});
+
+
+baseDal.js
+class BaseDAL {
+  constructor(model) {
+    this.model = model;
+  }
+
+  find(conditions = {}) {
+    return this.model.find(conditions);
+  }
+
+  async create(data) {
+    return await this.model.create(data);
+  }
+
+  findById(id) {
+    return this.model.findById(id);
+  }
+
+  async findByIdAndPopulate(id, populatePaths) {
+    return await this.model.findById(id).populate(populatePaths);
+  }
+
+  async findOne(conditions) {
+    return await this.model.findOne(conditions);
+  }
+
+  async find(conditions = {}) {
+    return await this.model.find(conditions);
+  }
+
+  async updateById(id, data) {
+    return await this.model.findByIdAndUpdate(id, data, { new: true });
+  }
+
+  async deleteById(id) {
+    return await this.model.findByIdAndDelete(id);
+  }
+}
+
+module.exports = BaseDAL;
+
+userDal.js
+const BaseDAL = require('./baseDal');
+const User = require('../models/userModel');
+
+class UserDAL extends BaseDAL {
+  constructor() {
+    super(User);
+  }
+
+  async findByEmail(email) {
+    return await this.findOne({email});
+  }
+}
+
+module.exports = new UserDAL();
+
+auth.js
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+
+module.exports = {
+  authenticate: (req, res, next) => {
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    if (!authHeader) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+
+    const token=authHeader.replace(/^Bearer\s+/i, '')
+    console.log("Extracted token: ", token)//debug
+
+    if(!token) {
+      return res.status(401).json({message: 'No token, authorization denied'})
+    }
+    try {
+      const decoded = jwt.verify(token, config.JWT_SECRET);
+      console.log('Decoded Token Payload: ', decoded)//debug
+      req.user = decoded;
+      next();
+    } catch (error) {
+      console.error('JWT Verification Error: ', error)//debug
+      res.status(401).json({ message: 'Token is not valid' });
+    }
+  },
+
+  authorizeAdmin: (req, res, next) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    next();
+  }
+};
+
 carModel.js
 const mongoose = require('mongoose');
 
@@ -51,18 +189,6 @@ const express = require('express');
 const router = express.Router();
 const carController = require('../controllers/carController');
 const { authenticate } = require('../middleware/auth');
-const multer=require('multer');
-
-const storage=multer.diskStorage({
-    destination: function(req,file,cb) {
-        cb(null, 'uploads/')
-    },
-    filename: function(req,file,cb) {
-        cb(null,Date.now()+'-'+file.originalname)
-    }
-});
-
-const upload=multer({storage: storage})
 
 
 // Public routes
@@ -72,15 +198,15 @@ router.get('/type/:cartype', carController.getCarsByType);
 
 // Admin-only routes
 router.use(authenticate);
-router.post('/', upload.array('images', 5) ,carController.createCar);
-router.put('/:id', upload.array('images', 5) ,carController.updateCar);
+router.post('/', carController.createCar);
+router.put('/:id',carController.updateCar);
 router.delete('/:id', carController.deleteCar);
 
 module.exports = router;
 
 carController.js
 const CarService = require('../services/carService');
-const path=require('path')
+const path = require('path')
 
 class CarController {
   async createCar(req, res) {
@@ -89,8 +215,8 @@ class CarController {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
-      const imageUrls = req.files ? req.files.map(file => file.path) : [];
-      const carData = { ...req.body, imageUrl: imageUrls }
+      const { imageUrl = [], ...otherData } = req.body;
+      const carData = { ...otherData, imageUrl: Array.isArray(imageUrl) ? imageUrl : [imageUrl] }
       const car = await CarService.createCar(carData);
       res.status(201).json(car);
     } catch (error) {
@@ -105,8 +231,12 @@ class CarController {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
-      const imageUrls = req.files ? req.files.map(file => file.path) : [];
-      const carData = { ...req.body, imageUrl: imageUrls }
+      // Get existing car data
+      const existingCar = await CarService.getCarById(req.params.id);
+
+      // If new files are uploaded, use their paths; otherwise, keep existing images
+      const { imageUrl = [], ...otherData } = req.body;
+      const carData = { ...otherData, imageUrl: Array.isArray(imageUrl) ? imageUrl : [imageUrl] }
       const car = await CarService.updateCar(req.params.id, carData);
       res.json(car);
     } catch (error) {
@@ -187,153 +317,358 @@ class CarService {
 
 module.exports = new CarService();
 
-carDal.js
-const BaseDAL = require('./baseDal');
-const Car = require('../models/carModel');
+this is backend
 
-class CarDAL extends BaseDAL {
-  constructor() {
-    super(Car);
+carlist.component.html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Rental</title>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Car Rental</h1>
+        <h1>LOCATION: {{city}}</h1>
+        <h1>CAR-MODEL: {{carname}}</h1>
+
+        <!-- Filters Section -->
+        <div class="filters">
+            <div class="form-group">
+                <label for="gear-type">Select Gear Type:</label>
+                <select id="gear-type" [(ngModel)]="selectedGearType" class="form-control">
+                    <option value="all">All</option>
+                    <option value="manual">Manual</option>
+                    <option value="automatic">Automatic</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div *ngIf="isLoading" class="loading">Loading cars...</div>
+
+        <!-- No Cars Found -->
+        <div *ngIf="!isLoading && filteredCars.length === 0" class="no-cars">
+            No cars available matching your criteria
+        </div>
+
+        <!-- Car Listings Section -->
+        <div class="row">
+            <div class="car-card" *ngFor="let car of filteredCars">
+                <img [src]="car.imageUrl" alt="{{car.make}} {{car.model}}" *ngIf="car.imageUrl">
+                <div class="caption">
+                    <h3>{{car.make}} {{car.model}}</h3>
+                    <div class="form-group">
+                        <label [for]="'distance-' + car._id">Enter Distance (in km):</label>
+                        <input type="number" [id]="'distance-' + car._id" [(ngModel)]="car.userDistance"
+                            class="form-control" placeholder="Enter distance" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label [for]="'days-' + car._id">Enter Rental Days:</label>
+                        <input type="number" [id]="'days-' + car._id" [(ngModel)]="car.rentalDays" class="form-control"
+                            placeholder="Enter rental days" min="0" required>
+                    </div>
+                    <p>Details: {{car.details}}</p>
+                    <p>Category: {{car.carCategory | titlecase}}</p>
+                    <p>Gear Type: {{car.gearType | titlecase}}</p>
+                    <p>Price per km: ₹{{car.pricePerKm | number}}</p>
+                    <p>Price per day: ₹{{car.pricePerDay | number}}</p>
+                    <p>Rental Cost: ₹{{calculateRentalCost(car) | number:'1.2-2'}}</p>
+                    <p>Extra Discount Rides: {{car.extraDiscountRides || 0}}</p>
+                    <button class="btn btn-primary" [disabled]="!car.userDistance || !car.rentalDays"
+                        (click)="calculateLoyaltyPoints(car); bookCar(car)">
+                        Book Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+
+</html>
+
+carlist.component.ts
+import { Component, OnInit } from '@angular/core';
+import { CarService } from '../services/car.service';
+import { SharedService } from '../shared.service';
+
+interface Car {
+  _id: string;
+  make: string;
+  model: string;
+  carCategory: 'economy' | 'premier' | 'luxury';
+  pricePerKm: number;
+  pricePerDay: number;
+  imageUrl: string;
+  gearType: 'manual' | 'automatic';
+  userDistance?: number;
+  rentalDays?: number;
+  loyaltyPoints?: number;
+  extraDiscountRides?: number;
+  details?: string;
+}
+
+@Component({
+  selector: 'app-carlist',
+  templateUrl: './carlist.component.html',
+  styleUrls: ['./carlist.component.css']
+})
+export class CarlistComponent {
+
+  selectedType: string = 'all';
+  selectedGearType: string = 'all';
+  // selectedCity: string = 'all';
+  city: string = 'All';
+  carname: string = '';
+  car1: string = '';
+  cars: any[] = [];
+  isLoading: boolean = false;
+
+  constructor(private sharedService: SharedService, public carService: CarService) { }
+
+  ngOnInit(): void {
+    const { city, carname, car1 } = this.sharedService.getCityAndCar();
+    this.city = city;
+    this.carname = carname;
+    this.car1 = car1;
+
+    this.loadCars()
   }
 
-  async findAvailableCars() {
-    return await this.find({ availabilityStatus: 'available' });
+  loadCars(): void {
+    this.isLoading = true;
+    const observable = this.selectedType === 'all' ? this.carService.getAvailableCars() : this.carService.getCarsByType(this.selectedType);
+    observable.subscribe({
+      next: (cars: Car[]) => {
+        this.cars = cars.map(car => ({
+          ...car,
+          userDistance: null,
+          rentalDays: null,
+          loyaltyPoints: 0,
+          extraDiscountRides: 0,
+          details: this.generateCarDetails(car)
+        }));
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error loading cars:', err);
+        this.isLoading = false;
+      }
+    });
   }
 
-  async findByType(carType) {
-    return await this.find({ cartype: { $regex: new RegExp(`^${carType}$`, 'i') }, availabilityStatus: 'available' });
+  generateCarDetails(car: Car): string {
+    switch (car.carCategory) {
+      case 'economy':
+        return 'Economical and fuel-efficient';
+      case 'premier':
+        return 'Comfortable and spacious';
+      case 'luxury':
+        return 'Luxury and high performance';
+      default:
+        return 'Car available for rent';
+    }
+  }
+
+  // ctype = 'luxury';
+
+  // cars: Car[] = [
+  //   { name: 'Car 1', image: './assets/suv6.jfif', model: 'Model 1', type: 'economy', rentalDetails: { pricePerKm: 10, discount: 20, perDayCost: 500 }, details: 'Economical and fuel-efficient', gearType: 'manual', isFrequentRenter: true, loyaltyPoints: 0, extraDiscountRides: 0 },
+  //   { name: 'Car 2', image: './assets/suv1.jfif', model: 'Model 2', type: 'premier', rentalDetails: { pricePerKm: 12, discount: 25, perDayCost: 700 }, details: 'Comfortable and spacious', gearType: 'automatic', isFrequentRenter: false, loyaltyPoints: 0, extraDiscountRides: 0 },
+  //   { name: 'Car 3', image: './assets/suv2.jfif', model: 'Model 3', type: 'luxury', rentalDetails: { pricePerKm: 15, discount: 30, perDayCost: 1000 }, details: 'Luxury and high performance', gearType: 'automatic', isFrequentRenter: true, loyaltyPoints: 0, extraDiscountRides: 0 },
+  //   { name: 'Car 4', image: './assets/suv3.jfif', model: 'Model 4', type: 'economy', rentalDetails: { pricePerKm: 10, discount: 20, perDayCost: 500 }, details: 'Economical and fuel-efficient', gearType: 'automatic', isFrequentRenter: true, loyaltyPoints: 0, extraDiscountRides: 0 },
+  //   { name: 'Car 5', image: './assets/suv4.jfif', model: 'Model 1', type: 'premier', rentalDetails: { pricePerKm: 10, discount: 20, perDayCost: 500 }, details: 'Comfortable and spacious', gearType: 'manual', isFrequentRenter: true, loyaltyPoints: 0, extraDiscountRides: 0 },
+  //   { name: 'Car 6', image: './assets/suv5.jfif', model: 'Model 3', type: 'luxury', rentalDetails: { pricePerKm: 10, discount: 20, perDayCost: 500 }, details: 'Luxury and high performance', gearType: 'manual', isFrequentRenter: true, loyaltyPoints: 0, extraDiscountRides: 0 }
+  // ];
+
+  onTypeChange(): void {
+    this.loadCars();
+  }
+
+  get filteredCars(): Car[] {
+    return this.cars.filter(car => (this.selectedGearType === 'all' || car.gearType === this.selectedGearType)
+    );
+  }
+
+  calculateRentalCost(car: Car): number {
+    if (!car.userDistance || !car.rentalDays) return 0;
+
+    const baseCost = car.pricePerKm * car.userDistance;
+    let totalCost = baseCost;
+
+    // Add daily rental cost (excluding first day which is included in distance cost)
+    if (car.rentalDays > 1) {
+      totalCost += car.pricePerDay * (car.rentalDays - 1);
+    }
+
+    // Apply discounts based on category
+    if (car.extraDiscountRides && car.extraDiscountRides > 0) {
+      totalCost *= 0.9; // 10% discount
+    }
+
+    return totalCost;
+  }
+
+  calculateLoyaltyPoints(car: Car): void {
+    if (!car.userDistance) return;
+
+    const points = Math.floor(car.userDistance / 50);
+    car.loyaltyPoints = (car.loyaltyPoints || 0) + points;
+
+    if (car.loyaltyPoints >= 25) {
+      car.extraDiscountRides = 2;
+      car.loyaltyPoints -= 25;
+    }
+  }
+
+  bookCar(car: Car): void {
+    if (!car.userDistance || !car.rentalDays) return;
+
+    const cost = this.calculateRentalCost(car);
+    alert(`Booking confirmed for ${car.make} ${car.model}!
+           Distance: ${car.userDistance} km
+           Days: ${car.rentalDays}
+           Total Cost: ₹${cost.toFixed(2)}
+           Loyalty Points: ${car.loyaltyPoints}
+           Extra Discount Rides: ${car.extraDiscountRides || 0}`
+          );
   }
 }
 
-module.exports = new CarDAL();
+vehicletypes.component.html
+<html>
 
-baseDal.js
-class BaseDAL {
-  constructor(model) {
-    this.model = model;
-  }
+<h1 style="text-align: center; margin-top: 100px;">Vehicle Models</h1>
+<p style="text-align: center;font-size:18px; font-family: Arial, Helvetica, sans-serif;color:silver">Our
+    rental fleet. To contribute to positive change and achieve our sustainability goals with many extraordinary.</p>
 
-  find(conditions = {}) {
-    return this.model.find(conditions);
-  }
 
-  async create(data) {
-    return await this.model.create(data);
-  }
+<!-- selecting a location -->
+<div class="selectlocation1">
+    <label style="font-size: 20px;">Select Location:</label>
+    <select [(ngModel)]="selectlocation">
+        <option value="" disabled hidden>select location</option>
+        <option *ngFor="let location of locations">{{location}}</option>
+    </select>
+</div>
 
-  findById(id) {
-    return this.model.findById(id);
-  }
 
-  async findByIdAndPopulate(id, populatePaths) {
-    return await this.model.findById(id).populate(populatePaths);
-  }
+<!-- pickup date -->
+<div class="date">
+    <label>Pickup Date:</label>
+    <input type="date" [min]='today' [(ngModel)]="pickupdate"
+        style="height: 20px;font-size: 16px;font-family: Arial, Helvetica, sans-serif;">
 
-  async findOne(conditions) {
-    return await this.model.findOne(conditions);
-  }
+    <!-- return date -->
 
-  async find(conditions = {}) {
-    return await this.model.find(conditions);
-  }
+    <label style="padding-left: 10px;">Return Date:</label>
+    <input type="date" [min]='pickupdate' [(ngModel)]="returndate"
+        style="height: 20px; font-size: 16px;font-family: Arial, Helvetica, sans-serif;">
+</div>
 
-  async updateById(id, data) {
-    return await this.model.findByIdAndUpdate(id, data, { new: true });
-  }
+<!-- selectcategory -->
 
-  async deleteById(id) {
-    return await this.model.findByIdAndDelete(id);
-  }
+<div style="margin-left:48%;margin-top: 25px;" class="category">
+    <select [(ngModel)]="selectcategory" (change)="oncategorychange()">
+
+        <option value='' disabled hidden>select category</option>
+        <option *ngFor="let category of categories">{{category}}</option>
+    </select>
+</div>
+
+
+
+<!-- display car buttons -->
+<div class="car1">
+    <button *ngFor="let car of cars" [disabled]="car.category!=selectcategory" (click)="selectcar(car)">
+        {{car.name}}
+    </button>
+</div>
+
+
+
+<!-- it will check if selectedcars variable  is empty or not if not empty then it will display selected car image  -->
+<div *ngIf='selectedcars' class="car2">
+    <div>
+        <img [src]="selectedcars.photo" alt="{{selectedcars.name}}" class="c2">
+    </div>
+
+    <div class="cardetails">
+        <h3>{{selectedcars.name}}</h3>
+        <ul>
+
+            <li> <b style="color: green;">Luggage: </b>{{selectedcars.Luggage}}</li><br>
+            <li><b style="color: green;"> Model: </b>{{selectedcars.Model}}</li><br>
+            <li><b style="color: green;">Milage: </b> {{selectedcars.milage}}KM</li><br>
+            <li><b style="color: green;">Re-Fund: </b>Full repayment</li>
+            <p></p>
+            <button (click)="booknow()" [disabled]="!formvalid()">BookNow</button>
+        </ul>
+
+    </div>
+</div>
+
+
+
+
+</html>
+
+vehicletypes.component.ts
+import { Component} from '@angular/core';
+import { Router } from '@angular/router';
+import { SharedService } from '../shared.service';
+
+@Component({
+  selector: 'app-vehicletypes',
+  templateUrl: './vehicletypes.component.html',
+  styleUrls: ['./vehicletypes.component.css']
+})
+export class VehicletypesComponent {
+  locations: string[] = ["Banglore", "Chennai", "Hyderbad", "Mumbai"]; //for locations i have created array
+  selectlocation: string = ''; 
+  pickupdate: string = ''; //we need to type here yyyy-mm-dd format
+  today: string = new Date().toISOString().split('T')[0]; //it will give current date
+  returndate: string = '';
+
+constructor( private router: Router, private sharedService: SharedService) {
+
 }
-
-module.exports = BaseDAL;
-
-app.js
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const config = require('./config');
-const path=require('path')
-
-// Import routes
-const authRoutes = require('./routes/authRouter');
-const userRoutes = require('./routes/userRouter');
-const carRoutes = require('./routes/carRouter');
-const taxRoutes = require('./routes/taxRouter');
-const rentalRoutes = require('./routes/rentalRouter');
-
-// Initialize Express app
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static('uploads'));
-
-// Connect to MongoDB
-mongoose.connect(config.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/cars', carRoutes);
-app.use('/api/taxes', taxRoutes);
-app.use('/api/rentals', rentalRoutes);
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
-});
-
-app.listen(config.PORT, () => {
-  console.log(`Server running on port ${config.PORT}`);
-});
-
-
-auth.js
-const jwt = require('jsonwebtoken');
-const config = require('../config');
-
-module.exports = {
-  authenticate: (req, res, next) => {
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-    if (!authHeader) {
-      return res.status(401).json({ message: 'No token, authorization denied' });
-    }
-
-    const token=authHeader.replace(/^Bearer\s+/i, '')
-    console.log("Extracted token: ", token)//debug
-
-    if(!token) {
-      return res.status(401).json({message: 'No token, authorization denied'})
-    }
-    try {
-      const decoded = jwt.verify(token, config.JWT_SECRET);
-      console.log('Decoded Token Payload: ', decoded)//debug
-      req.user = decoded;
-      next();
-    } catch (error) {
-      console.error('JWT Verification Error: ', error)//debug
-      res.status(401).json({ message: 'Token is not valid' });
-    }
-  },
-
-  authorizeAdmin: (req, res, next) => {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
-    next();
+formvalid() {
+    return (this.selectlocation && this.pickupdate &&this.returndate && this.selectcategory );
   }
-};
 
-{
-    "_id": "6826f3af8f4eadd01b112946",
-    "imageUrl":[
-        "assets/honda[0].jfif",
-        "assets/honda[1].jfif",
-        "assets/honda[2].jfif"
-    ]
+cars: any[] = [
+    { name: 'SUV', category:'premier', Model: 2023, Luggage: '2 bags', milage: 30, photo: '/assets/Suv.jfif' },
+    { name: 'Sedan',category:'economy', Model: 2022, Luggage: '6 bags', milage: 20, photo: '/assets/sedan.jpg' },
+    { name: 'Hyundai',category:'economy', Model: 2021, Luggage: '3 bags', milage: 25, photo: '/assets/Hyundai.webp' },
+    { name: 'Honda', category:'premier',Model: 2020, Luggage: '4 bags', milage: 35, photo: '/assets/honda.jfif' },
+    { name: 'Force', category:'luxury',Model: 2016, Luggage: '6 bags', milage: 40, photo: '/assets/Tempo1.jpg' }
+  ];
+  
+
+categories:string[]=['economy','premier','luxury'];
+
+selectcategory:string='';
+filteredcars:any[]=[];
+selectedcars: any = this.cars[0];
+
+oncategorychange() {
+  
+    this.filteredcars=this.cars.filter(car=>car.category==this.selectcategory);
+    this.selectedcars=this.filteredcars[0];
+  }
+public selectcar(car: any) {
+    this.selectedcars = car;
+  }
+    public booknow() {
+    this.sharedService.setCityAndCar(this.selectlocation, this.selectedcars.name, this.selectcategory);
+    // console.log('City and Car set in shared service:', this.selectlocation, this.selectedcars.name,this.selectcategory);
+    this.router.navigate(['/carlist']);
+  }
 }
