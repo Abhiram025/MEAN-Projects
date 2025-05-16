@@ -1,277 +1,198 @@
-userRoutes.js
-const express = require('express');
-const router = express.Router();
-const userController = require('../controllers/userController');
-const { authenticate } = require('../middleware/auth');
+// car.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-router.post('/forgot-password', userController.requestPasswordReset);
-router.patch('/reset-password/:token', userController.resetPasswordToken)
+interface Car {
+  _id: string;
+  make: string;
+  model: string;
+  carCategory: 'economy' | 'premier' | 'luxury';
+  pricePerKm: number;
+  pricePerDay: number;
+  imageUrl: string;
+  gearType: 'manual' | 'automatic';
+  // Add other fields as needed
+}
 
-router.use(authenticate);
+@Injectable({
+  providedIn: 'root'
+})
+export class CarService {
+  private apiUrl = 'http://localhost:3000/api/cars'; // Adjust to your backend URL
 
-router.get('/profile', userController.getProfile);
-router.put('/profile', userController.updateProfile);
-router.put('/change-password', userController.changePassword);
-router.put('/reset-password', userController.resetPassword);
+  constructor(private http: HttpClient) {}
 
-module.exports = router;
-
-userController.js
-const UserService = require('../services/userService');
-
-class UserController {
-  async getProfile(req, res) {
-    try {
-      const user = await UserService.getUserById(req.user.id);
-      res.json(user);
-    } catch (error) {
-      res.status(404).json({ message: error.message });
-    }
+  getAvailableCars(): Observable<Car[]> {
+    return this.http.get<Car[]>(`${this.apiUrl}/`);
   }
 
-  async updateProfile(req, res) {
-    try {
-      const user = await UserService.updateProfile(req.user.id, req.body);
-      res.json(user);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  async changePassword(req, res) {
-    try {
-      const { currentPassword, newPassword } = req.body;
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: 'Both current and new password are required' });
-      }
-      await UserService.changePassword(req.user.id, currentPassword, newPassword);
-      res.json({ message: 'Password changed successfully' });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  async requestPasswordReset(req, res) {
-    try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: 'Email is required' });
-      }
-      const resetToken=await UserService.requestPasswordReset(email);
-
-      ers.json({
-        status:'success',
-        message:'Token sent to email',
-        token: resetToken//remove this in production
-      })
-      
-    } catch (error) {
-      res.status(500).json({status:'error', message: error.message });
-    }
-  }
-
-  async resetPasswordToken(req, res) {
-    try {
-      const {token}=req.params;
-      const {newPassword, confirmPassword}=req.body;
-
-      await UserService.resetPasswordWithToken(token, newPassword, confirmPassword);
-      res.json({status:'success', message:'Password updated successfully'})
-    }
-    catch(err) {
-      const statusCode=err.message.includes('Token')?400:500;
-      res.status(statusCode).json({status:'error',message:err.message})
-    }
-  }
-
- async resetPasswordToken(req, res) {
-    try {
-      const {token}=req.params;
-      const {newPassword, confirmPassword}=req.body;
-
-      await UserService.resetPasswordWithToken(token, newPassword, confirmPassword);
-      res.json({status:'success', message:'Password updated successfully'})
-    }
-    catch(err) {
-      console.log("you have got an error 2")
-      const statusCode=err.message.includes('token')?400:500;
-      res.status(statusCode).json({status:'error',message:err.message})
-    }
+  getCarsByType(carType: string): Observable<Car[]> {
+    return this.http.get<Car[]>(`${this.apiUrl}/type/${carType}`);
   }
 }
 
-module.exports = new UserController();
+//app.module.ts
+import { HttpClientModule } from '@angular/common/http';
 
-userService.js
-const UserDAL = require('../dal/userDal');
-const { validate } = require('../models/userModel');
-const crypto=require('crypto')
+@NgModule({
+  declarations: [
+    // your components
+  ],
+  imports: [
+    BrowserModule,
+    HttpClientModule,
+    FormsModule // for ngModel
+    // other modules
+  ],
+  providers: [],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
 
-class UserService {
-  async updateProfile(userId, profileData) {
-    return await UserDAL.updateById(userId, profileData);
+<div class="container">
+    <h1>Car Rental</h1>
+    <h1>LOCATION: {{city}}</h1>
+    <h1>CAR-MODEL: {{carname}}</h1>
+
+    <!-- Filters Section -->
+    <div class="filters">
+        <div class="form-group">
+            <label for="car-type">Select Car Category:</label>
+            <select id="car-type" [(ngModel)]="selectedType" (change)="onTypeChange()" class="form-control">
+                <option value="all">All</option>
+                <option value="economy">Economy</option>
+                <option value="premier">Premier</option>
+                <option value="luxury">Luxury</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="gear-type">Select Gear Type:</label>
+            <select id="gear-type" [(ngModel)]="selectedGearType" class="form-control">
+                <option value="all">All</option>
+                <option value="manual">Manual</option>
+                <option value="automatic">Automatic</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div *ngIf="isLoading" class="loading">Loading cars...</div>
+
+    <!-- Car Listings Section -->
+    <div class="row">
+        <div class="car-card" *ngFor="let car of filteredCars">
+            <img [src]="car.imageUrl" alt="Car image" *ngIf="car.imageUrl">
+            <div class="caption">
+                <h3>{{car.make}} {{car.model}}</h3>
+                <div class="form-group">
+                    <label for="distance-{{ car._id }}">Enter Distance (in km):</label>
+                    <input type="number" id="distance-{{ car._id }}" [(ngModel)]="car.userDistance" 
+                           class="form-control" placeholder="Enter distance" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="days-{{ car._id }}">Enter Rental Days:</label>
+                    <input type="number" id="days-{{ car._id }}" [(ngModel)]="car.rentalDays" 
+                           class="form-control" placeholder="Enter rental days" min="0" required>
+                </div>
+                <p>Category: {{ car.carCategory | titlecase }}</p>
+                <p>Gear Type: {{ car.gearType | titlecase }}</p>
+                <p>Price per km: ₹{{ car.pricePerKm }}</p>
+                <p>Price per day: ₹{{ car.pricePerDay }}</p>
+                <p>Rental Cost: ₹{{ calculateRentalCost(car) | number:'1.2-2' }}</p>
+                <p>Extra Discount Rides: {{ car.extraDiscountRides || 0 }}</p>
+                <button class="btn btn-primary" 
+                        [disabled]="!car.userDistance || !car.rentalDays" 
+                        (click)="calculateLoyaltyPoints(car); bookCar(car)">
+                    Book Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+// carlist.component.ts
+import { Component, OnInit } from '@angular/core';
+import { CarService } from '../car.service';
+import { SharedService } from '../shared.service';
+
+@Component({
+  selector: 'app-carlist',
+  templateUrl: './carlist.component.html',
+  styleUrls: ['./carlist.component.css']
+})
+export class CarlistComponent implements OnInit {
+  selectedType: string = 'all';
+  selectedGearType: string = 'all';
+  city: string = 'All';
+  carname: string = '';
+  car1: string = '';
+  cars: any[] = [];
+  isLoading: boolean = false;
+
+  constructor(
+    private sharedService: SharedService,
+    private carService: CarService
+  ) {}
+
+  ngOnInit(): void {
+    const { city, carname, car1 } = this.sharedService.getCityAndCar();
+    this.city = city;
+    this.carname = carname;
+    this.car1 = car1;
+    
+    // Load initial cars
+    this.loadCars();
   }
 
-  async changePassword(userId, currentPassword, newPassword) {
-    const user = await UserDAL.findById(userId);
-    const isMatch = await user.comparePassword(currentPassword);
-    if (!isMatch) {
-      throw new Error('Current password is incorrect');
+  loadCars(): void {
+    this.isLoading = true;
+    if (this.selectedType === 'all') {
+      this.carService.getAvailableCars().subscribe({
+        next: (cars) => {
+          this.cars = cars.map(car => ({
+            ...car,
+            userDistance: null,
+            rentalDays: null,
+            loyaltyPoints: 0,
+            extraDiscountRides: 0
+          }));
+          this.isLoading = false;
+        },
+        error: (err) => {
+          console.error('Error loading cars:', err);
+          this.isLoading = false;
+        }
+      });
+    } else {
+      this.carService.getCarsByType(this.selectedType).subscribe({
+        next: (cars) => {
+          this.cars = cars.map(car => ({
+            ...car,
+            userDistance: null,
+            rentalDays: null,
+            loyaltyPoints: 0,
+            extraDiscountRides: 0
+          }));
+          this.isLoading = false;
+        },
+        error: (err) => {
+          console.error('Error loading cars by type:', err);
+          this.isLoading = false;
+        }
+      });
     }
-
-    if (newPassword.length < 8) {
-      throw new Error('Password must be at least 8 characters');
-    }
-
-    // Hash and save new password
-    user.password = newPassword;
-    await user.save(); // This triggers the pre-save hook
-
-    return user;
   }
 
-  async requestPasswordReset(email) {
-    const user = await UserDAL.findByEmail(email);
-    if (!user) return; // Don't reveal if email exists
-
-    const resetToken=user.createPasswordResetToken();
-    await user.save({validateBeforeSave: false});
-
-    return resetToken
+  onTypeChange(): void {
+    this.loadCars();
   }
 
-async resetPasswordWithToken(token, newPassword, confirmPassword) {
-    if (newPassword !== confirmPassword) throw new Error("Passwords don't match");
-    if (newPassword.length < 8) throw new Error('Password must be atleast 8 characters');
 
-    const hashedToken=crypto.createHash('sha256').update(token).digest('hex');
-    const user = await UserDAL.findByResetToken(hashedToken);
-    console.log("level 2 is here")
-    if (!user) throw new Error("Token is invalid or has expired")
-
-    const samePassword = await user.comparePassword(newPassword);
-    if (samePassword) throw new Error("Cannot use previous password");
-
-    user.password = newPassword;
-    user.resetToken=undefined;
-    user.resetTokenExpiry=undefined;
-
-    await user.save();
-    return user;
-  }
-
-  async getUserById(userId) {
-    return await UserDAL.findById(userId);
-  }
+get filteredCars(): Car[] {
+  return this.cars.filter(car => 
+    (this.selectedGearType === 'all' || car.gearType === this.selectedGearType)
+  );
 }
-
-module.exports = new UserService();
-
-userModel.js
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  phone: {
-    type: String,
-    required: [true, 'phone number is required'],
-    validate: {
-      validator: function (v) {
-        return /^\d{10}$/.test(v)
-      }
-    }
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    validate: {
-      validator: function (v) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-      },
-      message: props => `${props.value} is not a valid email address!`
-    }
-  },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  loyaltyPoints: { type: Number, default: 0 },
-  eligibleForDiscountedRides: { type: Number, default: 0 },
-  resetToken: String,
-  resetTokenExpiry: Date
-}, { timestamps: true });
-
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (err) {
-    next(err)
-  }
-
-
-});
-
-
-userSchema.methods.createPasswordResetToken = () => {
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  this.resetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-
-  this.resetTokenExpiry = Date.now()+ 10 * 60 * 1000;
-  return resetToken;
+  
 }
-
-
-
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
-
-
-module.exports = mongoose.model('User', userSchema);
-
-baseDal.js
-class BaseDAL {
-  constructor(model) {
-    this.model = model;
-  }
-
-  find(conditions = {}) {
-    return this.model.find(conditions);
-  }
-
-  async create(data) {
-    return await this.model.create(data);
-  }
-
-  findById(id) {
-    return this.model.findById(id);
-  }
-
-  async findByIdAndPopulate(id, populatePaths) {
-    return await this.model.findById(id).populate(populatePaths);
-  }
-
-  async findOne(conditions) {
-    return await this.model.findOne(conditions);
-  }
-
-  async find(conditions = {}) {
-    return await this.model.find(conditions);
-  }
-
-  async updateById(id, data) {
-    return await this.model.findByIdAndUpdate(id, data, { new: true });
-  }
-
-  async deleteById(id) {
-    return await this.model.findByIdAndDelete(id);
-  }
-}
-
-module.exports = BaseDAL;
