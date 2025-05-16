@@ -1,139 +1,66 @@
-import { Component, OnInit } from '@angular/core';
-import { SharedService } from '../shared.service';
-import { CarService } from '../car.service';
+<div class="container">
+    <h1>Car Rental</h1>
+    <h1>LOCATION: {{city}}</h1>
+    <h1>CAR-MODEL: {{carname}}</h1>
 
-interface Car {
-  _id: string;
-  make: string;
-  model: string;
-  carCategory: 'economy' | 'premier' | 'luxury';
-  pricePerKm: number;
-  pricePerDay: number;
-  imageUrl: string;
-  gearType: 'manual' | 'automatic';
-  userDistance?: number;
-  rentalDays?: number;
-  loyaltyPoints?: number;
-  extraDiscountRides?: number;
-  details?: string;
-}
+    <!-- Filters Section -->
+    <div class="filters">
+        <div class="form-group">
+            <label for="car-type">Select Car Category:</label>
+            <select id="car-type" [(ngModel)]="selectedType" (change)="onTypeChange()" class="form-control">
+                <option value="all">All</option>
+                <option value="economy">Economy</option>
+                <option value="premier">Premier</option>
+                <option value="luxury">Luxury</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="gear-type">Select Gear Type:</label>
+            <select id="gear-type" [(ngModel)]="selectedGearType" class="form-control">
+                <option value="all">All</option>
+                <option value="manual">Manual</option>
+                <option value="automatic">Automatic</option>
+            </select>
+        </div>
+    </div>
 
-@Component({
-  selector: 'app-carlist',
-  templateUrl: './carlist.component.html',
-  styleUrls: ['./carlist.component.css']
-})
-export class CarlistComponent implements OnInit {
-  selectedType: string = 'all';
-  selectedGearType: string = 'all';
-  city: string = 'All';
-  carname: string = '';
-  car1: string = '';
-  cars: Car[] = [];
-  isLoading: boolean = false;
+    <!-- Loading Indicator -->
+    <div *ngIf="isLoading" class="loading">Loading cars...</div>
 
-  constructor(
-    private sharedService: SharedService,
-    private carService: CarService
-  ) {}
+    <!-- No Cars Found -->
+    <div *ngIf="!isLoading && filteredCars.length === 0" class="no-cars">
+        No cars available matching your criteria
+    </div>
 
-  ngOnInit(): void {
-    const { city, carname, car1 } = this.sharedService.getCityAndCar();
-    this.city = city || 'All';
-    this.carname = carname || '';
-    this.car1 = car1 || '';
-    
-    this.loadCars();
-  }
-
-  loadCars(): void {
-    this.isLoading = true;
-    const observable = this.selectedType === 'all' 
-      ? this.carService.getAvailableCars() 
-      : this.carService.getCarsByType(this.selectedType);
-
-    observable.subscribe({
-      next: (cars: Car[]) => {
-        this.cars = cars.map(car => ({
-          ...car,
-          userDistance: null,
-          rentalDays: null,
-          loyaltyPoints: 0,
-          extraDiscountRides: 0,
-          details: this.generateCarDetails(car)
-        }));
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Error loading cars:', err);
-        this.isLoading = false;
-      }
-    });
-  }
-
-  generateCarDetails(car: Car): string {
-    switch(car.carCategory) {
-      case 'economy':
-        return 'Economical and fuel-efficient';
-      case 'premier':
-        return 'Comfortable and spacious';
-      case 'luxury':
-        return 'Luxury and high performance';
-      default:
-        return 'Car available for rent';
-    }
-  }
-
-  get filteredCars(): Car[] {
-    return this.cars.filter(car => 
-      (this.selectedGearType === 'all' || car.gearType === this.selectedGearType)
-    );
-  }
-
-  calculateRentalCost(car: Car): number {
-    if (!car.userDistance || !car.rentalDays) return 0;
-
-    const baseCost = car.pricePerKm * car.userDistance;
-    let totalCost = baseCost;
-
-    // Add daily rental cost (excluding first day which is included in distance cost)
-    if (car.rentalDays > 1) {
-      totalCost += car.pricePerDay * (car.rentalDays - 1);
-    }
-
-    // Apply discounts based on category
-    if (car.extraDiscountRides && car.extraDiscountRides > 0) {
-      totalCost *= 0.9; // 10% discount
-    }
-
-    return totalCost;
-  }
-
-  calculateLoyaltyPoints(car: Car): void {
-    if (!car.userDistance) return;
-    
-    const points = Math.floor(car.userDistance / 50);
-    car.loyaltyPoints = (car.loyaltyPoints || 0) + points;
-
-    if (car.loyaltyPoints >= 25) {
-      car.extraDiscountRides = 2;
-      car.loyaltyPoints -= 25;
-    }
-  }
-
-  bookCar(car: Car): void {
-    if (!car.userDistance || !car.rentalDays) return;
-    
-    const cost = this.calculateRentalCost(car);
-    alert(`Booking confirmed for ${car.make} ${car.model}!
-           Distance: ${car.userDistance} km
-           Days: ${car.rentalDays}
-           Total Cost: ₹${cost.toFixed(2)}
-           Loyalty Points: ${car.loyaltyPoints}
-           Extra Discount Rides: ${car.extraDiscountRides || 0}`);
-  }
-
-  onTypeChange(): void {
-    this.loadCars();
-  }
-}
+    <!-- Car Listings Section -->
+    <div class="row">
+        <div class="car-card" *ngFor="let car of filteredCars">
+            <img [src]="car.imageUrl" alt="{{car.make}} {{car.model}}" *ngIf="car.imageUrl">
+            <div class="caption">
+                <h3>{{car.make}} {{car.model}}</h3>
+                <div class="form-group">
+                    <label [for]="'distance-' + car._id">Enter Distance (in km):</label>
+                    <input type="number" [id]="'distance-' + car._id" [(ngModel)]="car.userDistance" 
+                           class="form-control" placeholder="Enter distance" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label [for]="'days-' + car._id">Enter Rental Days:</label>
+                    <input type="number" [id]="'days-' + car._id" [(ngModel)]="car.rentalDays" 
+                           class="form-control" placeholder="Enter rental days" min="0" required>
+                </div>
+                <p>Details: {{car.details}}</p>
+                <p>Category: {{car.carCategory | titlecase}}</p>
+                <p>Gear Type: {{car.gearType | titlecase}}</p>
+                <p>Price per km: ₹{{car.pricePerKm | number}}</p>
+                <p>Price per day: ₹{{car.pricePerDay | number}}</p>
+                <p>Rental Cost: ₹{{calculateRentalCost(car) | number:'1.2-2'}}</p>
+                <p>Extra Discount Rides: {{car.extraDiscountRides || 0}}</p>
+                <button class="btn btn-primary" 
+                        [disabled]="!car.userDistance || !car.rentalDays" 
+                        (click)="calculateLoyaltyPoints(car); bookCar(car)">
+                    Book Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
