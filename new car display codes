@@ -1,0 +1,90 @@
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class SharedService {
+  private city: string = '';
+  private carType: string = '';
+  private carCategory: string = '';
+  private pickupdate: string = '';
+  private returndate: string = '';
+
+  // Store selected car type and category (not car name)
+  setSelection(city: string, carType: string, carCategory: string, pickupdate: string, returndate: string): void {
+    this.city = city;
+    this.carType = carType;
+    this.carCategory = carCategory;
+    this.pickupdate = pickupdate;
+    this.returndate = returndate;
+  }
+
+  // Get selected car type and category
+  getSelection(): { city: string, carType: string, carCategory: string, pickupdate: string, returndate: string } {
+    return {
+      city: this.city,
+      carType: this.carType,
+      carCategory: this.carCategory,
+      pickupdate: this.pickupdate,
+      returndate: this.returndate
+    };
+  }
+}
+
+<div class="row" *ngIf="carsToShow.length > 0">
+  <div class="car-card" *ngFor="let car of carsToShow">
+    <div class="car-images">
+      <img [src]="'http://localhost:3000' + car.image" [alt]="car.make + ' image'" class="car-image" />
+    </div>
+    <div class="caption">
+      <h2>{{car.make}} {{car.model}}</h2>
+      <p><b>Model:</b> {{car.model}}</p>
+      <p><b>Gear Type:</b> {{car.gearType}}</p>
+      <p><b>Features:</b></p>
+      <ul>
+        <li *ngFor="let feature of car.features">{{feature}}</li>
+      </ul>
+      <button class="btn btn-primary" (click)="bookNow(car._id)">Book Now</button>
+    </div>
+  </div>
+</div>
+
+import { Component, OnInit } from '@angular/core';
+import { SharedService } from '../shared.service';
+import { CarService, Car } from '../services/car.service';
+import { RentalService } from '../services/rental.service';
+import { Router } from '@angular/router';
+
+@Component({
+  selector: 'app-carlist',
+  templateUrl: './carlist.component.html',
+  styleUrls: ['./carlist.component.css']
+})
+export class CarlistComponent implements OnInit {
+  carsToShow: Car[] = [];
+  // ...other properties...
+
+  constructor(
+    private sharedService: SharedService,
+    private carService: CarService,
+    private rentalService: RentalService,
+    private router: Router
+  ) {}
+
+  ngOnInit(): void {
+    const { carType, carCategory } = this.sharedService.getSelection();
+    this.carService.getAvailableCars().subscribe((cars) => {
+      // Filter cars by type and category
+      this.carsToShow = cars.filter(car =>
+        car.cartype === carType && car.carCategory === carCategory
+      );
+    });
+  }
+
+  // ...bookNow method...
+}
+
+<!-- Example snippet -->
+<img [src]="'http://localhost:3000' + selectedCar.image" alt="{{selectedCar.make}}" class="c2">
+
+delete all the cars in the database assign each and every car a new image instead changing the whole schema this is easy because even if imageUrl is a string array we can store single image and render each image and car 
